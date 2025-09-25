@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Genetic Epidemiology — Map + Timeline + Dual District Charts + Genetic Tree</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#1B1E28; --panel:#242836; --muted:#A5B1C2; --text:#EAEFF6;
+    --chip:#27304A; --border:#3C3F4A; --mapbg:#171C2E;
+    --district-fill:#12172A; --district-stroke:#3F4C61; --district-weight:0.5;
+    --province-stroke:#9DA7B4; --province-weight:1.5;
+    --label-badge-bg:rgba(0,0,0,.30); --label-badge-brd:rgba(255,255,255,.12); --label-color:#F1F3F5;
+    --fade:0.22; --fade-stroke:0.35;
+    --table-border:#2A3550;
+	--accent:#4DD0E1; --accent-contrast:#0B1A22;
+	--tl-h: 56px; /* timeline bar height */
+  }
+  html.light{
+    --bg:#F7F9FC; --panel:#FFFFFF; --muted:#6C7A89; --text:#212529;
+    --chip:#EFF2F7; --border:#E3E7EF; --mapbg:#CDE2E2;
+    --district-fill:#FFFFFF; --district-stroke:#E4E4E4; --district-weight:0.5;
+    --province-stroke:#C4C4C4; --province-weight:1.5;
+    --label-badge-bg:rgba(255,255,255,.70); --label-badge-brd:rgba(0,0,0,.15); --label-color:#1F2937;
+	--fade:0.35; --fade-stroke:0.60;
+    --table-border:#E3E7EF;
+	--accent:#339AF0; --accent-contrast:#FFFFFF;
+	--tl-h: 56px; /* timeline bar height */
+  }
+
+  html, body {height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--text)}
+  body{overflow-x:hidden;} /* ← remove horizontal scrollbar */
+  #layout {display:grid; grid-template-rows: 1fr auto; height:100vh}
+
+  /* Map */
+  #mapWrap {position:relative}
+  #map {height:100%; width:100%; background:var(--mapbg)}
+  .province-label{color:var(--label-color); font-size:12px; font-weight:700; text-shadow:0 1px 0 rgba(0,0,0,.35);}
+  .province-label .badge{display:inline-block; padding:2px 6px; border-radius:8px; background:var(--label-badge-bg); border:1px solid var(--label-badge-brd);}
+  .count-badge{background:rgba(0,0,0,0.55); color:#fff; border:1px solid rgba(255,255,255,.2); padding:2px 6px; border-radius:999px; font-size:11px; font-weight:700}
+
+  /* Date title (top centered) */
+  #dateTitle{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    z-index:550; font-size:22px; font-weight:800; letter-spacing:.02em;
+    background:var(--panel); border:1px solid var(--border);
+    padding:6px 12px; border-radius:10px;
+  }
+
+  /* Left controls */
+  #leftPanel{
+    position:absolute; top:56px; left:12px; z-index:500;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px; width:360px;
+    max-height:85vh; overflow:auto;
+	padding-bottom: calc(var(--tl-h) + 14px); /* prevent overlap with timeline */
+  }
+  #leftPanel h2{font-size:13px; margin:0 0 6px 0; opacity:.85; text-transform:uppercase; letter-spacing:.08em}
+  .ctrl{display:flex; align-items:center; gap:8px; margin:6px 0; font-size:12px}
+  .ctrl label{min-width:170px; color:var(--muted)}
+  .ctrl input[type="number"]{width:90px}
+  .btn{background:transparent; border:1px solid var(--border); color:var(--text); border-radius:10px; padding:6px 10px; cursor:pointer; font-size:12px}
+  .btn:disabled{opacity:.6; cursor:not-allowed}
+  #toast{position:absolute; left:50%; transform:translateX(-50%); top:12px; background:var(--panel); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:8px 10px; font-size:12px; display:none; z-index:600}
+
+  /* Right charts + legend (legend under charts) */
+  #rightPanel{
+    position:absolute; top:56px; right:12px; z-index:700;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px; width:440px;
+  }
+  #rightPanel h2{font-size:13px; margin:0 0 6px 0; opacity:.85; text-transform:uppercase; letter-spacing:.08em}
+  #chartA, #chartB{width:100%; height:220px}
+  .chip{display:inline-block; background:var(--chip); border:1px solid var(--border); border-radius:999px; padding:2px 8px; font-size:12px; color:var(--muted)}
+  .legend-row{display:flex; align-items:center; gap:8px; margin:4px 0; cursor:pointer}
+  .legend-row.inactive{opacity:.45}
+  .swatch{
+  width:16px; height:16px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:none; padding:0; background:none;
+}
+  .legend-actions{display:flex; gap:6px; margin:6px 0}
+  .legend-actions button{font-size:12px; padding:3px 6px; border:1px solid var(--border); background:transparent; color:var(--text); border-radius:6px; cursor:pointer}
+
+  select, input, button{font:inherit}
+
+  /* Bottom timeline */
+#timelineBar{
+  position:absolute; bottom:0; left:0; right:0;
+  height: var(--tl-h);
+  display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center;
+  padding:8px 12px; background:var(--panel); color:var(--text); border-top:1px solid var(--border);
+  z-index:600;
+}
+  #timeSlider{width:100%}
+  .pill{background:var(--chip); border:1px solid var(--border); color:var(--muted); padding:4px 8px; border-radius:999px; font-size:12px}
+
+  /* Genetic tree panel */
+  #treePanel { margin-top:10px; padding-top:8px; border-top:1px solid var(--border); }
+  #treePanel h2{font-size:13px; margin:0 0 6px 0; opacity:.85; text-transform:uppercase; letter-spacing:.08em}
+  #treeSVG{width:100%; height:300px; overflow:visible; display:block; cursor:grab; user-select:none; touch-action:none} /* ← ensure tips/labels are visible */
+  #treeLegend{margin-top:6px; font-size:12px}
+  /* Collapsible table */
+  details#simDetails{margin-top:8px; border-top:1px dashed var(--border); padding-top:8px}
+  #simTable{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px}
+  #simTable th,#simTable td{border:1px solid var(--table-border); padding:4px 6px; text-align:left}
+  #simTable th{background:rgba(255,255,255,.06); color:var(--text)}
+  
+  /* Sticky player buttons inside the left panel, always above the timeline */
+.panel-actions{
+  position: sticky;
+  bottom: calc(var(--tl-h) + 8px);
+  z-index: 650;                 /* above the map & within the panel */
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+</style>
+</head>
+<body>
+<div id="layout">
+  <div id="mapWrap">
+    <div id="map"></div>
+    <div id="dateTitle">—</div>
+
+    <!-- Left control panel -->
+    <aside id="leftPanel" aria-label="Controls">
+      <h2>Data & Controls</h2>
+      <div class="ctrl"><label>Districts GeoJSON (ADM2)</label><input id="geojsonDistrictsFile" type="file" accept=".geojson,.json,application/geo+json" /></div>
+      <div class="ctrl"><label>Provinces GeoJSON (ADM1)</label><input id="geojsonProvincesFile" type="file" accept=".geojson,.json,application/geo+json" /></div>
+      <div class="ctrl"><label>Samples CSV</label><input id="csvFile" type="file" accept=".csv" /></div>
+
+      <div class="ctrl"><label>Days / step</label><input id="speedDays" type="number" min="1" value="7" /></div>
+      <div class="ctrl"><label>Step (ms)</label><input id="stepInterval" type="number" min="100" step="100" value="600" /></div>
+      <div class="ctrl"><label>Window (days)</label><input id="windowDays" type="number" min="1" value="30" /></div>
+      <div class="ctrl"><label>Lifespan (days)</label><input id="lifespanDays" type="number" min="1" value="180" /></div>
+      <div class="ctrl"><label>Marker size (px)</label><input id="markerSize" type="number" min="3" max="18" value="8" /></div>
+      <div class="ctrl"><label>Jitter within (m)</label><input id="jitterM" type="number" min="0" step="25" value="5000" /></div>
+      <div class="ctrl"><label>Show sample counts</label><input id="toggleCounts" type="checkbox" checked /></div>
+      <div class="ctrl"><label>Province labels</label><input id="toggleProvLabels" type="checkbox" checked /></div>
+      <div class="ctrl">
+        <label>Theme</label>
+        <select id="themeSelect" style="flex:1">
+          <option value="dark" selected>Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+
+      <!-- Genetic distances -->
+<div id="treePanel">
+  <h2>Genetic Similarity Tree</h2>
+  <div class="ctrl">
+    <label>Genetic distance (.tab)</label>
+    <input id="tabFile" type="file" accept=".tab,.tsv,text/tab-separated-values,text/plain" />
+  </div>
+
+  <!-- Toggle button -->
+  <div class="ctrl" style="margin-top:6px">
+    <button id="treeToggle" class="btn">Show genetic tree</button>
+  </div>
+
+  <!-- Tree body (hidden by default) -->
+  <div id="treeBody" style="display:none">
+  <div class="ctrl" id="treeZoomCtrl" style="gap:6px; margin:4px 0 6px 0">
+  <button id="treeZoomIn" class="btn" title="Zoom in">＋</button>
+  <button id="treeZoomOut" class="btn" title="Zoom out">−</button>
+</div>
+    <svg id="treeSVG"></svg>
+    <div id="treeNote" style="font-size:12px; color:var(--muted); margin-top:6px"></div>
+    <div id="treeLegend" style="margin-top:6px; font-size:12px"></div>
+  </div>
+</div>
+
+
+        <!-- Collapsible similarity table -->
+        <details id="simDetails">
+          <summary style="cursor:pointer">Genetic similarity table (toggle)</summary>
+          <div id="simTableWrap"></div>
+        </details>
+      </div>
+
+      <div id="playerActions" class="panel-actions ctrl" style="gap:6px; margin-top:8px">
+  <button class="btn" id="playBtn">▶ Play</button>
+  <button class="btn" id="pauseBtn">⏸ Pause</button>
+  <button class="btn" id="resetBtn">↺ Reset</button>
+</div>
+
+      <div class="chip">Space = Play/Pause</div>
+    </aside>
+
+    <!-- Right panel: two charts + legend UNDER charts + align axis -->
+    <aside id="rightPanel" aria-label="District charts">
+      <h2>District Trends (stacked by cluster)</h2>
+
+      <div class="ctrl">
+        <label>District A</label>
+        <select id="districtSelectA" style="flex:1"></select>
+      </div>
+      <svg id="chartA"></svg>
+
+      <div class="ctrl" style="margin-top:8px">
+        <label>District B</label>
+        <select id="districtSelectB" style="flex:1"></select>
+      </div>
+      <svg id="chartB"></svg>
+
+      <div class="ctrl" style="margin-top:6px">
+        <label>Align axis (rolling 36 months)</label>
+        <input id="alignAxisToggle" type="checkbox" checked />
+      </div>
+
+      <div style="margin-top:6px" class="chip">
+        x: month • y: samples (cumulative to current date)
+      </div>
+
+      <!-- Legend under charts (click to multi-select) -->
+      <div style="display:flex; align-items:center; gap:8px; margin-top:10px">
+        <strong style="font-size:12px; opacity:.85">Legend</strong>
+        <div class="legend-actions">
+          <button id="legendShowAll">Show all</button>
+          <button id="legendHideAll">Hide all</button>
+          <button id="legendToggleBtn">Hide</button>
+        </div>
+      </div>
+      <div id="legendBox" style="margin-top:6px; line-height:1.4"></div>
+    </aside>
+
+    <div id="toast"></div>
+  </div>
+
+  <!-- Timeline -->
+  <footer id="timelineBar">
+      <input id="timeSlider" type="range" min="0" max="100" step="1" value="0" disabled />
+      <div style="display:flex; gap:8px; align-items:center">
+        <span class="pill">Date: <b id="currentDateLabel">–</b></span>
+      </div>
+    </footer>
+  </div>
+
+<!-- Libs -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+<script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+
+<script>
+/* ==================== State ==================== */
+
+/* ===== Marker shapes + palette (theme-independent) ===== */
+// Curated, high-contrast palette (no grey colors)
+const PALETTE24 = Array.from(new Set([
+  // ColorBrewer Set 1
+  "#e41a1c","#377eb8","#4daf4a","#984ea3","#ff7f00",
+  "#F0E442","#a65628","#f781bf","#66c2a5", "#e7298a",
+  "#E69F00","#56B4E9","#009E73","#9C755F","#E15759",
+  "#EDC948","#B07AA1", "#FF9DA7", "#4E79A7", "#fc8d62",
+  "#8da0cb", "#a6d854", "#e5c494", "#7570b3"
+]));
+
+// Decide which shape a (non-unclustered) cluster uses based on its index
+// 1–24: circle, 25–49: square, 50–74: diamond
+function clusterShapeByIndex(i){
+  if(i < 24) return "circle";
+  if(i < 49) return "square";
+  return "diamond";
+}
+
+// Build an SVG marker icon for Leaflet (DivIcon)
+function svgMarkerIcon({shape,color,size=8,fillOpacity=0.7,strokeOpacity=1}) {
+  const s = size, w = (size*2)+6, h = (size*2)+6, cx = w/2, cy = h/2;
+  let inner = '';
+  if(shape === 'circle'){
+    inner = `<circle cx="${cx}" cy="${cy}" r="${s}" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-opacity="${strokeOpacity}" stroke-width="2"/>`;
+  }else if(shape === 'square'){
+    inner = `<rect x="${cx-s}" y="${cy-s}" width="${2*s}" height="${2*s}" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-opacity="${strokeOpacity}" stroke-width="2"/>`;
+  }else if(shape === 'diamond'){
+    inner = `<rect x="${cx-s}" y="${cy-s}" width="${2*s}" height="${2*s}" transform="rotate(45 ${cx} ${cy})" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-opacity="${strokeOpacity}" stroke-width="2"/>`;
+  }else if(shape === 'triangle'){ // upward triangle for Unclustered
+    const p1 = `${cx},${cy-s}`;
+    const p2 = `${cx-s},${cy+s}`;
+    const p3 = `${cx+s},${cy+s}`;
+    inner = `<polygon points="${p1} ${p2} ${p3}" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-opacity="${strokeOpacity}" stroke-width="2"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${inner}</svg>`;
+  return L.divIcon({className:'', html: svg, iconSize:[w,h], iconAnchor:[cx,cy]});
+}
+
+// Sorted cluster list used for shape bucketing (populated after CSV load)
+let clustArrSorted = [];
+
+/* Small SVG used in the legend swatch (global so buildLegend can call it) */
+function svgLegendSwatch(shape, color){
+  const r = 7; // size of legend marker
+  const w = 16, h = 16;
+  if (shape === 'circle'){
+    return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${w/2}" cy="${h/2}" r="${r-1}" fill="${color}" stroke="${color}" stroke-width="1.5"/>
+    </svg>`;
+  } else if (shape === 'square'){
+    const s = 2*(r-1);
+    const x = (w - s)/2, y = (h - s)/2;
+    return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${x}" y="${y}" width="${s}" height="${s}" rx="2" ry="2"
+        fill="${color}" stroke="${color}" stroke-width="1.5"/>
+    </svg>`;
+  } else if (shape === 'diamond'){
+    return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="${w/2},2 ${w-2},${h/2} ${w/2},${h-2} 2,${h/2}"
+        fill="${color}" stroke="${color}" stroke-width="1.5"/>
+    </svg>`;
+  } else { // triangle
+    return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="${w/2},2 ${w-2},${h-2} 2,${h-2}"
+        fill="${color}" stroke="${color}" stroke-width="1.5"/>
+    </svg>`;
+  }
+}
+
+let map, districtLayer, provinceLayer, markersLayer, countsLayer, provinceLabelsLayer;
+let gidToCentroid = new Map();   // ADM2 gid -> [lat, lon]
+let gidToName = new Map();       // ADM2 gid -> display name
+let gidToFeature = new Map();    // ADM2 gid -> GeoJSON feature
+let samples = [];                // {gid, dayInt, cluster, latlng:[lat,lon], districtName}
+let clusters = new Set();
+let colorForCluster;
+let showCounts = true;
+
+let playing=false, timer=null;
+let minDay=null, maxDay=null, currentDay=null;
+
+const DAY_MS = 86400000;
+let currentTheme = 'dark';
+
+let selectedClusters = new Set(); // legend selections; empty = all visible
+
+/* Genetic distance matrix loaded from .tab */
+let treeZoom = null;                    // d3.zoom() instance (created once)
+let treeZoomTransform = d3.zoomIdentity; // remember pan/zoom between redraws
+let geneticDist = null; // {labels:[], matrix: number[][]}
+
+/* ==================== Elements ==================== */
+const dateTitle         = document.getElementById('dateTitle');
+const geojsonDistrictsInput = document.getElementById('geojsonDistrictsFile');
+const geojsonProvincesInput = document.getElementById('geojsonProvincesFile');
+const csvInput     = document.getElementById('csvFile');
+const tabInput     = document.getElementById('tabFile');
+const playBtn      = document.getElementById('playBtn');
+const pauseBtn     = document.getElementById('pauseBtn');
+const resetBtn     = document.getElementById('resetBtn');
+const toggleCounts = document.getElementById('toggleCounts');
+const speedDaysInput    = document.getElementById('speedDays');
+const stepIntervalInput = document.getElementById('stepInterval');
+const windowDaysInput   = document.getElementById('windowDays');
+const lifespanDaysInput = document.getElementById('lifespanDays');
+const markerSizeInput   = document.getElementById('markerSize');
+const jitterMInput      = document.getElementById('jitterM');
+const timeSlider        = document.getElementById('timeSlider');
+const currentDateLabel  = document.getElementById('currentDateLabel');
+const districtSelectA   = document.getElementById('districtSelectA');
+const districtSelectB   = document.getElementById('districtSelectB');
+const themeSelect       = document.getElementById('themeSelect');
+const alignAxisToggle   = document.getElementById('alignAxisToggle');
+const toggleProvLabels  = document.getElementById('toggleProvLabels');
+/* Legend */
+const legendBox         = document.getElementById('legendBox');
+const legendShowAllBtn  = document.getElementById('legendShowAll');
+const legendHideAllBtn  = document.getElementById('legendHideAll');
+const legendToggleBtn   = document.getElementById('legendToggleBtn');
+const toast             = document.getElementById('toast');
+const treeNote          = document.getElementById('treeNote');
+const treeZoomIn  = document.getElementById('treeZoomIn');
+const treeZoomOut = document.getElementById('treeZoomOut');
+const treeToggle        = document.getElementById('treeToggle');
+const treeBody          = document.getElementById('treeBody');
+
+
+/* ==================== UI Helpers ==================== */
+function showToast(msg, ms=2800){
+  toast.textContent = msg;
+  toast.style.display='block';
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>toast.style.display='none', ms);
+}
+
+/* ==================== Map ==================== */
+function initMap(){
+  map = L.map('map', { zoomControl:false });
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  map.setView([15,100], 5);
+  markersLayer = L.layerGroup().addTo(map);
+  countsLayer  = L.layerGroup().addTo(map);
+  provinceLabelsLayer = L.layerGroup().addTo(map);
+}
+initMap();
+
+/* ==================== Theme ==================== */
+function applyTheme(theme){
+  currentTheme = theme;
+  if(theme === 'light'){
+    document.documentElement.classList.add('light');
+  }else{
+    document.documentElement.classList.remove('light');
+  }
+  const cs = getComputedStyle(document.documentElement);
+  if(districtLayer){
+    districtLayer.setStyle({
+      color: cs.getPropertyValue('--district-stroke').trim(),
+      weight: parseFloat(cs.getPropertyValue('--district-weight')),
+      fillColor: cs.getPropertyValue('--district-fill').trim(),
+      fillOpacity: 1
+    });
+  }
+  if(provinceLayer){
+    provinceLayer.setStyle({
+      color: cs.getPropertyValue('--province-stroke').trim(),
+      weight: parseFloat(cs.getPropertyValue('--province-weight')),
+      fillOpacity: 0
+    });
+  }
+}
+themeSelect.addEventListener('change', ()=> applyTheme(themeSelect.value));
+applyTheme('dark');
+
+/* Province labels toggle */
+toggleProvLabels.addEventListener('change', ()=>{
+  if(toggleProvLabels.checked){
+    if(!map.hasLayer(provinceLabelsLayer)) provinceLabelsLayer.addTo(map);
+  }else{
+    if(map.hasLayer(provinceLabelsLayer)) map.removeLayer(provinceLabelsLayer);
+  }
+});
+
+/* ==================== Geo helpers ==================== */
+function normalizeKey(x){ return (x==null ? '' : String(x)).trim(); }
+function findGidKey(props){
+  const keys = Object.keys(props||{});
+  const candidates = ['GID_2','GID_1','GID','ADM2_PCODE','ADM1_PCODE','PCODE'];
+  for(const c of candidates){ if(keys.includes(c)) return c; }
+  for(const k of keys){ if(/GID|PCODE/i.test(k)) return k; }
+  return null;
+}
+function findNameKey(props){
+  const keys = Object.keys(props||{});
+  const candidates = ['AdmDiv2','AdminDiv2','NAME_2','NAME_1','ADM2_EN','ADM1_EN','NAME','District','district'];
+  for(const c of candidates){ if(keys.includes(c)) return c; }
+  for(const k of keys){ if(/NAME|DIST|AdmDiv2|AdminDiv2/i.test(k)) return k; }
+  return null;
+}
+function parseDateFlexible(s){
+  if(!s) return null;
+  const t = Date.parse(s);
+  if(!isNaN(t)) return new Date(t);
+  const m = String(s).trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+  if(m){
+    const d = +m[1], mo = +m[2]-1, y = m[3].length===2 ? +( '20'+m[3] ) : +m[3];
+    return new Date(Date.UTC(y,mo,d));
+  }
+  return null;
+}
+function fmtDateFromDayInt(dayInt){
+  const dt = new Date(dayInt * DAY_MS);
+  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), d = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+/* Random point inside district with bias near base point */
+function randomPointInPolygon(polygon){
+  let pt; const bbox = turf.bbox(polygon);
+  do { pt = turf.randomPoint(1, { bbox }).features[0]; }
+  while (!turf.booleanPointInPolygon(pt, polygon));
+  return pt.geometry.coordinates; // [lon, lat]
+}
+function pointNearBaseInPolygon(polygon, baseLatLng, meters){
+  const km = Math.max(0, meters) / 1000;
+  const basePt = turf.point([baseLatLng[1], baseLatLng[0]]);
+  const bbox = turf.bbox(polygon);
+  for(let i=0;i<80;i++){
+    const cand = turf.randomPoint(1, { bbox }).features[0];
+    if(!turf.booleanPointInPolygon(cand, polygon)) continue;
+    const dist = turf.distance(basePt, cand, {units:'kilometers'});
+    if(dist <= km) return cand.geometry.coordinates;
+  }
+  const baseLonLat = [baseLatLng[1], baseLatLng[0]];
+  if(turf.booleanPointInPolygon(turf.point(baseLonLat), polygon)) return baseLonLat;
+  return randomPointInPolygon(polygon);
+}
+function jitterWithinDistrict(gid, baseLatLng){
+  const feature = gidToFeature.get(gid);
+  if(!feature){ return baseLatLng; }
+  let coords;
+  if(isFinite(jitterMeters) && jitterMeters>0 && baseLatLng){
+    coords = pointNearBaseInPolygon(feature, baseLatLng, jitterMeters);
+  } else {
+    coords = randomPointInPolygon(feature);
+  }
+  return [coords[1], coords[0]];
+}
+
+/* ==================== Config synced from inputs ==================== */
+let windowDays = 30, lifespanDays = 180, markerRadius = 8, jitterMeters = 5000, stepDays = 7, stepIntervalMs = 600;
+
+/* ==================== Loaders ==================== */
+// Districts (ADM2)
+geojsonDistrictsInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const text = await file.text();
+  let gj;
+  try { gj = JSON.parse(text); } catch(err){ showToast('Invalid Districts GeoJSON'); return; }
+
+  if(districtLayer){ map.removeLayer(districtLayer); }
+  gidToCentroid.clear(); gidToName.clear(); gidToFeature.clear();
+
+  const cs = getComputedStyle(document.documentElement);
+  districtLayer = L.geoJSON(gj, {
+    style: ()=>({
+      color: cs.getPropertyValue('--district-stroke').trim(),
+      weight: parseFloat(cs.getPropertyValue('--district-weight')),
+      fillColor: cs.getPropertyValue('--district-fill').trim(),
+      fillOpacity:1
+    })
+  }).addTo(map);
+
+  try { map.fitBounds(districtLayer.getBounds(), {padding:[20,20]}); } catch(_) {}
+
+  const proto = (gj.features && gj.features[0] && gj.features[0].properties) || {};
+  const gidKey  = findGidKey(proto);
+  const nameKey = findNameKey(proto);
+  if(!gidKey){ showToast('⚠️ Could not find a GID-like property in Districts GeoJSON.'); }
+
+  gj.features.forEach(f=>{
+    const gid = normalizeKey(f.properties[gidKey]);
+    const nm  = nameKey ? normalizeKey(f.properties[nameKey]) : gid;
+    gidToFeature.set(gid, f);
+    let center;
+    try { center = turf.center(f).geometry.coordinates; }
+    catch(_) { try { center = turf.centroid(f).geometry.coordinates; } catch(err){ center = null; } }
+    if(center){
+      const latlng = [center[1], center[0]];
+      gidToCentroid.set(gid, latlng);
+      gidToName.set(gid, nm);
+    }
+  });
+
+  showToast(`Loaded ${gj.features?.length||0} districts. You can add provinces and CSV.`);
+});
+
+// Provinces (ADM1) — thick border + labels
+geojsonProvincesInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const text = await file.text();
+  let gj;
+  try { gj = JSON.parse(text); } catch(err){ showToast('Invalid Provinces GeoJSON'); return; }
+
+  if(provinceLayer){ map.removeLayer(provinceLayer); }
+  provinceLabelsLayer.clearLayers();
+
+  const cs = getComputedStyle(document.documentElement);
+  provinceLayer = L.geoJSON(gj, {
+    style: ()=>({
+      color: cs.getPropertyValue('--province-stroke').trim(),
+      weight: parseFloat(cs.getPropertyValue('--province-weight')),
+      fillOpacity:0
+    })
+  }).addTo(map);
+
+  // Province labels
+  const proto = (gj.features && gj.features[0] && gj.features[0].properties) || {};
+  const nmKey = ['NAME_1','ADM1_EN','NAME'].find(k=>proto && k in proto) || Object.keys(proto||{}).find(k=>/NAME/i.test(k));
+  gj.features.forEach(f=>{
+    let center;
+    try { center = turf.center(f).geometry.coordinates; }
+    catch(_) { try { center = turf.centroid(f).geometry.coordinates; } catch(err){ center = null; } }
+    if(!center) return;
+    const label = (nmKey && f.properties[nmKey]) ? String(f.properties[nmKey]) : '';
+    const lbl = L.marker([center[1], center[0]], {
+      icon: L.divIcon({ className:'province-label', html:`<span class="badge">${label}</span>`, iconSize:null }),
+      interactive:false
+    });
+    provinceLabelsLayer.addLayer(lbl);
+  });
+
+  if(toggleProvLabels.checked){
+    if(!map.hasLayer(provinceLabelsLayer)) provinceLabelsLayer.addTo(map);
+  }else{
+    if(map.hasLayer(provinceLabelsLayer)) map.removeLayer(provinceLabelsLayer);
+  }
+
+  showToast(`Loaded ${gj.features?.length||0} provinces.`);
+});
+
+/* ==================== CSV loader ==================== */
+csvInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  Papa.parse(file, {
+    header:true, skipEmptyLines:true,
+    complete: (res)=> { try{ loadCSV(res.data); } catch(err){ console.error(err); showToast('CSV error: '+err.message); } },
+    error: (err)=> showToast('CSV parse failed: '+err)
+  });
+});
+
+function loadCSV(rows){
+  samples=[]; clusters.clear();
+  let missingGIDs = new Set();
+  let ok=0, bad=0;
+
+  for(const row of rows){
+    const gid = normalizeKey(
+      row.GID_2 || row.GID_1 || row.AdmDiv2_GID || row.AdmDiv1_GID ||
+      row.ADM2_PCODE || row.ADM1_PCODE || row.PCODE || row.gid || row.GID
+    );
+    const date = parseDateFlexible(row.CollectionDate || row.date || row.Date || row.collection_date);
+    const clusterRaw = row.Cluster ?? row.cluster ?? row.CLUSTER;
+    const cluster = (!clusterRaw || /^(NA|null|none|uncluster|unclustered)$/i.test(String(clusterRaw))) ? null : String(clusterRaw).trim();
+
+    const nameFromCsv = normalizeKey(row.AdmDiv2 || row.AdminDiv2 || row.admdiv2 || row.adminDiv2);
+
+    if(!gid || !date){ bad++; continue; }
+
+    const latCSV = parseFloat(row.Latitude ?? row.latitude ?? row.lat);
+    const lonCSV = parseFloat(row.Longitude ?? row.longitude ?? row.lon ?? row.lng);
+    let baseLatLng = (!isNaN(latCSV) && !isNaN(lonCSV)) ? [latCSV, lonCSV] : gidToCentroid.get(gid);
+    if(!baseLatLng){ missingGIDs.add(gid); continue; }
+
+    const ll = jitterWithinDistrict(gid, baseLatLng);
+
+    const dayInt = Math.floor(date.getTime()/DAY_MS);
+    const districtName = nameFromCsv || gidToName.get(gid) || gid;
+
+    samples.push({ gid, dayInt, cluster, latlng: ll, districtName });
+    if(cluster) clusters.add(cluster);
+    ok++;
+  }
+
+  if(ok===0){ showToast('No valid rows found. Check column names and GIDs.'); return; }
+
+// Colors for clusters (stable across themes, up to 24)
+const clustArr = Array.from(clusters.values()).sort();
+colorForCluster = d3.scaleOrdinal().domain(clustArr).range(PALETTE24);
+  // Keep a global, stable ordering for shape assignment
+  clustArrSorted = clustArr.slice();
+
+  selectedClusters.clear(); // reset selection
+
+  // Timeline
+  minDay = d3.min(samples, d=>d.dayInt);
+  maxDay = d3.max(samples, d=>d.dayInt);
+  currentDay = minDay;
+
+  timeSlider.min = String(minDay);
+  timeSlider.max = String(maxDay);
+  timeSlider.value = String(currentDay);
+  timeSlider.disabled = false;
+
+  // Dropdowns
+  const byGidDisplayName = new Map();
+  samples.forEach(s => byGidDisplayName.set(s.gid, s.districtName || gidToName.get(s.gid) || s.gid));
+  const gidsSorted = Array.from(new Set(samples.map(s=>s.gid)))
+    .sort((a,b)=>(byGidDisplayName.get(a)).localeCompare(byGidDisplayName.get(b)));
+
+  function fillSelect(sel){
+    sel.innerHTML = '';
+    gidsSorted.forEach(g=>{
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = byGidDisplayName.get(g);
+      sel.appendChild(opt);
+    });
+  }
+  fillSelect(districtSelectA);
+  fillSelect(districtSelectB);
+  districtSelectA.selectedIndex = 0;
+  districtSelectB.selectedIndex = Math.min(1, gidsSorted.length-1);
+
+  setPlaying(true);
+
+  let msg = `Loaded ${ok} samples`;
+  if(missingGIDs.size){ msg += ` • ${missingGIDs.size} GIDs not in GeoJSON`; }
+  if(bad){ msg += ` • ${bad} rows skipped`; }
+  showToast(msg, 4200);
+
+  // Now that data & colours are ready, render UI pieces
+  buildLegend();
+  updateScene();
+  updateTree();
+}
+
+
+/* ==================== Play/Pause/Reset & inputs ==================== */
+function setPlaying(v){
+  playing = v;
+  if(timer){ clearInterval(timer); timer=null; }
+  if(v){
+    timer = setInterval(()=>{
+      currentDay += stepDays;
+      if(currentDay > maxDay){ currentDay = minDay; }
+      timeSlider.value = String(currentDay);
+      updateScene();
+    }, stepIntervalMs);
+  }
+  updateScene();
+}
+playBtn.addEventListener('click', ()=> setPlaying(true));
+pauseBtn.addEventListener('click', ()=> setPlaying(false));
+resetBtn.addEventListener('click', ()=>{
+  if(districtLayer){ map.removeLayer(districtLayer); districtLayer=null; }
+  if(provinceLayer){ map.removeLayer(provinceLayer); provinceLayer=null; }
+  provinceLabelsLayer.clearLayers();
+  gidToCentroid.clear(); gidToName.clear(); gidToFeature.clear();
+  samples=[]; clusters.clear();
+  markersLayer.clearLayers(); countsLayer.clearLayers();
+  timeSlider.value=0; timeSlider.disabled=true;
+  minDay=maxDay=currentDay=null;
+  setPlaying(false);
+  geojsonDistrictsInput.value=''; geojsonProvincesInput.value=''; csvInput.value=''; tabInput.value='';
+  districtSelectA.innerHTML = '';
+  districtSelectB.innerHTML = '';
+  legendBox.innerHTML = '';
+  geneticDist = null;
+  d3.select("#treeSVG").selectAll("*").remove();
+  if (treeBody) treeBody.style.display = 'none';
+  if (treeToggle) treeToggle.textContent = 'Show genetic tree';
+  document.getElementById('simTableWrap').innerHTML = '';
+  document.getElementById('simTableWrap').innerHTML = '';
+  showToast('Cleared. Load new files.');
+});
+speedDaysInput.addEventListener('change', ()=>{ stepDays = Math.max(1, parseInt(speedDaysInput.value||'1',10)); if(playing) setPlaying(true); });
+stepIntervalInput.addEventListener('change', ()=>{ stepIntervalMs = Math.max(100, parseInt(stepIntervalInput.value||'600',10)); if(playing) setPlaying(true); });
+windowDaysInput.addEventListener('change', ()=>{ windowDays = Math.max(1, parseInt(windowDaysInput.value||'21',10)); updateScene(); });
+lifespanDaysInput.addEventListener('change', ()=>{ lifespanDays = Math.max(1, parseInt(lifespanDaysInput.value||'21',10)); updateScene(); });
+markerSizeInput.addEventListener('change', ()=>{ markerRadius = Math.max(1, parseInt(markerSizeInput.value||'5',10)); updateScene(); });
+jitterMInput.addEventListener('change', ()=>{ jitterMeters = Math.max(0, parseInt(jitterMInput.value||'75',10)); reJitterAll(); updateScene(); });
+timeSlider.addEventListener('input', ()=>{ currentDay = parseInt(timeSlider.value, 10); updateScene(); });
+window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ e.preventDefault(); setPlaying(!playing); } });
+toggleCounts.addEventListener('change', () => {
+  showCounts = toggleCounts.checked;
+  if (showCounts) { if (!map.hasLayer(countsLayer)) countsLayer.addTo(map); }
+  else { if (map.hasLayer(countsLayer)) map.removeLayer(countsLayer); }
+  updateScene();
+});
+
+
+/* ==================== Legend (under charts) ==================== */
+legendShowAllBtn.addEventListener('click', ()=>{
+  selectedClusters.clear(); updateScene(); updateCharts(); refreshLegendActive(); updateTree();
+});
+legendHideAllBtn.addEventListener('click', ()=>{
+  selectedClusters = new Set(['__NONE__']); updateScene(); updateCharts(); refreshLegendActive(); updateTree();
+});
+legendToggleBtn.addEventListener('click', ()=>{
+  const isHidden = legendBox.style.display === 'none';
+  legendBox.style.display = isHidden ? 'block' : 'none';
+  legendToggleBtn.textContent = isHidden ? 'Hide' : 'Show';
+});
+
+/* ==================== Genetic tree toggle ==================== */
+if (treeToggle && treeBody) {
+  treeToggle.addEventListener('click', () => {
+    const show = (treeBody.style.display === 'none' || treeBody.style.display === '');
+    treeBody.style.display = show ? 'block' : 'none';
+    treeToggle.textContent = show ? 'Hide genetic tree' : 'Show genetic tree';
+  });
+}
+
+/* Zoom buttons for genetic tree */
+if (treeZoomIn && treeZoomOut) {
+  const svgEl = document.getElementById('treeSVG');
+  const STEP = 1.2; // zoom multiplier per click
+
+  treeZoomIn.addEventListener('click', () => {
+    if (!treeZoom) return; // guard if tree not initialized yet
+    const p = [svgEl.clientWidth/2, svgEl.clientHeight/2];
+    d3.select(svgEl).transition().duration(160).call(treeZoom.scaleBy, STEP, p);
+  });
+  treeZoomOut.addEventListener('click', () => {
+    if (!treeZoom) return; // guard if tree not initialized yet
+    const p = [svgEl.clientWidth/2, svgEl.clientHeight/2];
+    d3.select(svgEl).transition().duration(160).call(treeZoom.scaleBy, 1/STEP, p);
+  });
+}
+
+function buildLegend(){
+  legendBox.innerHTML = '';
+  const clustersList = Array.from(new Set(samples.map(s=> s.cluster || 'Unclustered'))).sort();
+  clustersList.forEach(c=>{
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.dataset.key = c;
+    const sw = document.createElement('span');
+sw.className = 'swatch';
+const shape = (c === 'Unclustered')
+  ? 'triangle'
+  : clusterShapeByIndex(Math.max(0, clustArrSorted.indexOf(c)));
+const color = (c === 'Unclustered') ? '#8a8f98' : colorForCluster(c);
+sw.innerHTML = svgLegendSwatch(shape, color);
+    const lbl = document.createElement('span');
+    lbl.textContent = c;
+    row.appendChild(sw); row.appendChild(lbl);
+    row.addEventListener('click', ()=>{
+      if(selectedClusters.has('__NONE__')) selectedClusters.delete('__NONE__');
+      if(selectedClusters.has(c)) selectedClusters.delete(c); else selectedClusters.add(c);
+      updateScene(); updateCharts(); refreshLegendActive(); updateTree();
+    });
+    legendBox.appendChild(row);
+  });
+  refreshLegendActive();
+}
+function refreshLegendActive(){
+  const rows = legendBox.querySelectorAll('.legend-row');
+  rows.forEach(r=>{
+    const key = r.dataset.key;
+    const active = (selectedClusters.size===0) ? true
+                  : (selectedClusters.has('__NONE__') ? false : selectedClusters.has(key));
+    r.classList.toggle('inactive', !active);
+  });
+}
+function clusterIsActive(name){
+  if(selectedClusters.size===0) return true;
+  if(selectedClusters.has('__NONE__')) return false;
+  return selectedClusters.has(name || 'Unclustered');
+}
+
+/* ==================== Re-jitter ==================== */
+function reJitterAll(){
+  samples.forEach(s=>{
+    const baseForBias = s.latlng || gidToCentroid.get(s.gid);
+    s.latlng = jitterWithinDistrict(s.gid, baseForBias);
+  });
+}
+
+/* ==================== Scene & Charts ==================== */
+function updateScene(){
+  if(currentDay==null) return;
+  const startDay = currentDay - (windowDays-1);
+  const dateStr = fmtDateFromDayInt(currentDay);
+  currentDateLabel.textContent = dateStr;
+  dateTitle.textContent = dateStr;
+
+  const inWindow = samples.filter(s => s.dayInt >= startDay && s.dayInt <= currentDay);
+  const visibleLife = inWindow.filter(s => (currentDay - s.dayInt) <= (lifespanDays-1));
+
+  markersLayer.clearLayers();
+  const clustArr = Array.from(new Set(samples.map(d => d.cluster).filter(Boolean))).sort();
+  visibleLife.forEach(s => {
+  const key = s.cluster || 'Unclustered';
+  const color = (key === 'Unclustered') ? '#8a8f98' : colorForCluster(key);
+
+  const ageDays = currentDay - s.dayInt;
+  const baseAlpha = Math.max(0.25, 1 - (ageDays / Math.max(1, lifespanDays)));
+
+  const isAll  = selectedClusters.size === 0;
+  const isNone = selectedClusters.has('__NONE__');
+  const active = isAll ? true : (!isNone && selectedClusters.has(key));
+
+  // shape selection
+  const shape = (key === 'Unclustered')
+    ? 'triangle'
+    : clusterShapeByIndex(Math.max(0, clustArrSorted.indexOf(key)));
+
+  const icon = svgMarkerIcon({
+    shape,
+    color,
+    size: markerRadius,
+    fillOpacity: active ? (0.35 + 0.55 * baseAlpha) : 0,
+    strokeOpacity: active ? 1 : 0.7
+  });
+
+  L.marker(s.latlng, { icon })
+    .bindTooltip(`${gidToName.get(s.gid) || s.gid}<br><strong>${s.cluster || 'Unclustered'}</strong><br>${fmtDateFromDayInt(s.dayInt)}`)
+    .addTo(markersLayer);
+});
+
+
+  countsLayer.clearLayers();
+  if (showCounts) {
+    const counts = d3.rollup(visibleLife, v=>v.length, s=>s.gid);
+    for(const [gid,count] of counts){
+      const center = gidToCentroid.get(gid);
+      if(!center) continue;
+      const icon = L.divIcon({ className:'', html:`<div class="count-badge">${count}</div>` });
+      L.marker(center, { icon, interactive:false }).addTo(countsLayer);
+    }
+  }
+
+  updateCharts();
+}
+
+/* Charts */
+const CH_W = 380, CH_H = 180, M = {top:16,right:10,bottom:60,left:40};
+function makeChart(svgSel){
+  const el = d3.select(svgSel);
+  el.attr('width', CH_W).attr('height', CH_H);
+  const g = el.append('g').attr('transform', `translate(${M.left},${M.top})`);
+  return {
+    g,
+    gXAxis: g.append('g').attr('transform', `translate(0,${CH_H - M.top - M.bottom})`),
+    gYAxis: g.append('g'),
+    gBars:  g.append('g'),
+    innerW: CH_W - M.left - M.right,
+    innerH: CH_H - M.top - M.bottom
+  };
+}
+const CA = makeChart('#chartA');
+const CB = makeChart('#chartB');
+
+districtSelectA.addEventListener('change', updateCharts);
+districtSelectB.addEventListener('change', updateCharts);
+alignAxisToggle.addEventListener('change', updateCharts);
+
+function monthKeyFromDayInt(dayInt){
+  const dt = new Date(dayInt*DAY_MS);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+}
+function monthKeysWindow(endDayInt, n=36){
+  const end = new Date(endDayInt*DAY_MS);
+  const endY = end.getUTCFullYear();
+  const endM = end.getUTCMonth();
+  const keys = [];
+  for(let i=n-1;i>=0;i--){
+    const d = new Date(Date.UTC(endY, endM - i, 1));
+    keys.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`);
+  }
+  return keys;
+}
+
+function renderChartInto(groups, selectedGID, titleText, monthsDomain=null){
+  const { g, gXAxis, gYAxis, gBars, innerW, innerH } = groups;
+  gBars.selectAll('*').remove(); gXAxis.selectAll('*').remove(); gYAxis.selectAll('*').remove();
+  if(!selectedGID) return;
+
+  const upto = currentDay ?? 0;
+  const rowsAll = samples.filter(s => s.gid===selectedGID && s.dayInt <= upto);
+
+  const months = monthsDomain && monthsDomain.length
+                  ? monthsDomain.slice()
+                  : Array.from(new Set(rowsAll.map(r=>monthKeyFromDayInt(r.dayInt)))).sort();
+
+  const clusterNames = Array.from(new Set(rowsAll.map(r=> r.cluster || 'Unclustered'))).sort();
+
+  const monthToCounts = new Map(months.map(m=>[m, Object.fromEntries(clusterNames.map(c=>[c,0]))]));
+  rowsAll.forEach(r=>{
+    const mk = monthKeyFromDayInt(r.dayInt);
+    if(!monthToCounts.has(mk)){
+      if(!monthsDomain){ monthToCounts.set(mk, Object.fromEntries(clusterNames.map(c=>[c,0]))); months.push(mk); }
+      else return;
+    }
+    monthToCounts.get(mk)[r.cluster || 'Unclustered'] += 1;
+  });
+  months.sort();
+  const data = months.map(m=> ({ month:m, ...(monthToCounts.get(m) || {}) }));
+
+  const x = d3.scaleBand().domain(months).range([0, innerW]).padding(0.1);
+  const yMax = data.length ? d3.max(data, d => d3.sum(clusterNames, c => d[c]||0)) : 1;
+  const y = d3.scaleLinear().domain([0, yMax]).nice().range([innerH, 0]);
+
+  const color = (name)=> name==='Unclustered' ? '#8a8f98' : (colorForCluster ? colorForCluster(name) : '#4f46e5');
+  const stack = d3.stack().keys(clusterNames);
+  const series = stack(data);
+
+  const fadeVal = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fade'));
+  const layerG = gBars.selectAll('g.layer').data(series, d=>d.key)
+    .join(enter => enter.append('g').attr('class','layer'))
+    .attr('fill', d => color(d.key))
+    .attr('opacity', d => {
+      if(selectedClusters.size===0) return 1;
+      if(selectedClusters.has('__NONE__')) return 0.05;
+      return selectedClusters.has(d.key) ? 1 : fadeVal;
+    });
+
+  layerG.selectAll('rect')
+    .data(d => d.map(v => ({key:d.key, month:v.data.month, y0:v[0], y1:v[1]})))
+    .join('rect')
+    .attr('x', d => x(d.month))
+    .attr('y', d => y(d.y1))
+    .attr('height', d => Math.max(0, y(d.y0) - y(d.y1)))
+    .attr('width', x.bandwidth());
+
+  gXAxis.call(d3.axisBottom(x).tickValues(months));
+  gXAxis.selectAll('text').attr('transform','rotate(-90)').style('text-anchor','end').attr('dx','-8px').attr('dy','-4px');
+  gYAxis.call(d3.axisLeft(y).ticks(4));
+
+  g.selectAll('text.title').data([0]).join('text')
+    .attr('class','title').attr('x',0).attr('y',-6)
+    .attr('fill', getComputedStyle(document.documentElement).getPropertyValue('--muted'))
+    .attr('font-size','12px')
+    .text(titleText + ' — to ' + fmtDateFromDayInt(currentDay||minDay));
+}
+
+/* ==================== Genetic distances (.tab) — NJ tree ==================== */
+tabInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const text = await file.text();
+  geneticDist = parseDistanceTab(text);
+  if(!geneticDist){ showToast('Could not parse genetic distance .tab (needs "Cluster" header and square matrix).'); return; }
+  showToast(`Loaded genetic distances for ${geneticDist.labels.length} clusters.`);
+  updateTree();
+});
+
+function parseDistanceTab(text){
+  const rows = text.replace(/^\uFEFF/, '').trim().split(/\r?\n/)
+                   .map(r => r.split(/\t/).map(s => String(s||'').trim()));
+  if(rows.length < 2) return null;
+  const header = rows[0];
+  const labels = header.slice(1).map(s => s.replace(/^"+|"+$/g,'').trim());
+  if(labels.length < 2) return null;
+
+  const n = labels.length;
+  const indexByLabel = new Map(labels.map((l,i)=>[l,i]));
+  const M = Array.from({length:n}, () => Array(n).fill(0));
+
+  for(let r=1; r<rows.length; r++){
+    const row = rows[r];
+    if(!row.length) continue;
+    const lab = (row[0]||'').replace(/^"+|"+$/g,'').trim();
+    if(!indexByLabel.has(lab)) continue;
+    const i = indexByLabel.get(lab);
+    for(let c=1; c<=n; c++){
+      const cell = (row[c] ?? '').replace(',', '.');
+      const v = parseFloat(cell);
+      if(!isNaN(v)) M[i][c-1] = v;
+    }
+  }
+
+  // Symmetrize, clamp [0,1], diag=0
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      if(i===j){ M[i][j]=0; continue; }
+      const a = M[i][j], b = M[j][i];
+      let v = (isFinite(a)&&isFinite(b)) ? (a+b)/2 : (isFinite(a)?a:(isFinite(b)?b:1));
+      M[i][j] = Math.max(0, Math.min(1, v));
+    }
+  }
+  return { labels, matrix: M };
+}
+
+/* Neighbor-Joining to adjacency (unrooted); also returns the ID of the final join node */
+function buildNJAdjacency(subsetLabels){
+  const all = geneticDist.labels;
+  const idx = subsetLabels.map(l => all.indexOf(l));
+  if(idx.some(i => i < 0)) return null;
+
+  // Working subset distance matrix
+  let D = idx.map(i => idx.map(j => geneticDist.matrix[i][j]));
+  let ids = subsetLabels.slice();
+
+  const edges = [];
+  let internalCounter = 0;
+
+  function rowSums(mat){
+    const n = mat.length, r = Array(n).fill(0);
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++) r[i]+=mat[i][j];
+    return r;
+  }
+
+  while(ids.length > 2){
+    const n = D.length;
+    const R = rowSums(D);
+
+    let bi=0,bj=1,best=Infinity;
+    for(let i=0;i<n;i++){
+      for(let j=i+1;j<n;j++){
+        const Q = (n-2)*D[i][j] - R[i] - R[j];
+        if(Q < best){ best = Q; bi=i; bj=j; }
+      }
+    }
+
+    const Dij = D[bi][bj];
+    const delta = (R[bi] - R[bj]) / (n-2);
+    let Li = Math.max(0, 0.5*(Dij + delta));
+    let Lj = Math.max(0, Dij - Li);
+
+    const newId = `NJ#${++internalCounter}`;
+    edges.push([newId, ids[bi], Li]);
+    edges.push([newId, ids[bj], Lj]);
+
+    // New distances to remaining taxa
+    const newRow = [];
+    for(let k=0;k<n;k++){
+      if(k===bi || k===bj){ newRow.push(0); continue; }
+      const Duk = Math.max(0, Math.min(1, 0.5*(D[bi][k] + D[bj][k] - Dij)));
+      newRow.push(Duk);
+    }
+
+    const keep = [];
+    for(let k=0;k<n;k++) if(k!==bi && k!==bj) keep.push(k);
+    const Dnext = Array.from({length: keep.length+1}, () => Array(keep.length+1).fill(0));
+    for(let a=0;a<keep.length;a++) for(let b=0;b<keep.length;b++) Dnext[a][b] = D[keep[a]][keep[b]];
+    const u = keep.length;
+    for(let a=0;a<keep.length;a++){ Dnext[a][u] = newRow[keep[a]]; Dnext[u][a] = newRow[keep[a]]; }
+    D = Dnext;
+
+    const nextIds = keep.map(k => ids[k]); nextIds.push(newId); ids = nextIds;
+  }
+
+  // Final join (two nodes remain)
+  const Dij2 = D[0][1];
+  const a = ids[0], b = ids[1];
+  const finalRoot = `NJ#root`;
+  edges.push([finalRoot, a, Math.max(0, Dij2/2)]);
+  edges.push([finalRoot, b, Math.max(0, Dij2/2)]);
+
+  // Build adjacency
+  const adj = new Map();
+  function addEdge(u,v,len){
+    if(!adj.has(u)) adj.set(u, []);
+    if(!adj.has(v)) adj.set(v, []);
+    adj.get(u).push({id:v, w:len});
+    adj.get(v).push({id:u, w:len});
+  }
+  edges.forEach(([u,v,w]) => addEdge(u,v,w));
+  return {adj, rootId: finalRoot};
+}
+
+/* Convert rooted adjacency into a d3-friendly tree with edgeLength on each child node */
+function buildDirectedTree(adjacency, rootId){
+  function dfs(u, parent=null){
+    const children = [];
+    for(const {id:v, w} of adjacency.get(u)){
+      if(v === parent) continue;
+      const child = dfs(v, u);
+      child.edgeLength = w;
+      children.push(child);
+    }
+    return { name: u, children };
+  }
+  return dfs(rootId, null);
+}
+
+/* Draw rectangular phylogram scaled by cumulative branch length. */
+function updateTree(){
+  const svg = d3.select('#treeSVG');
+  const note = treeNote;
+  svg.selectAll('*').remove();
+  note.textContent = '';
+
+  if(!geneticDist){
+    note.textContent = 'Load a genetic distance .tab to display the tree.';
+    return;
+  }
+
+  // Selection: legend subset or all clusters from CSV; omit "Unclustered"
+  let sel = (selectedClusters.size && !selectedClusters.has('__NONE__'))
+    ? Array.from(selectedClusters)
+    : Array.from(clusters);
+  sel = sel.filter(c => c && c !== 'Unclustered');
+
+  // Keep order consistent with matrix header & keep only present labels
+  const present = geneticDist.labels.filter(l => sel.includes(l));
+  if(present.length < 2){
+    note.textContent = sel.length ? 'Not enough clusters (need ≥ 2 that exist in the matrix).' : 'No clusters selected.';
+    document.getElementById('simTableWrap').innerHTML = '';
+    return;
+  }
+
+  // Build NJ adjacency and use its final join as root (no midpoint rooting)
+  const nj = buildNJAdjacency(present);
+  if(!nj){ note.textContent = 'Failed to build NJ tree for the selection.'; return; }
+  const {adj, rootId} = nj;
+
+  const tree = buildDirectedTree(adj, rootId);
+  const root = d3.hierarchy(tree, d => (d.children && d.children.length ? d.children : null));
+
+  // cumulative length from root
+  root.each(n => { n.data.cum = (n.parent ? (n.parent.data.cum||0) + (n.data.edgeLength||0) : 0); });
+  const maxCum = d3.max(root.descendants(), d => d.data.cum || 0) || 1;
+
+  // Canvas and groups (extra right padding for labels so tips never go out of view)
+  const W = document.getElementById('treeSVG').clientWidth || 320;
+  const H = document.getElementById('treeSVG').clientHeight || 300;
+  const labelPad = 110; // space for text at the right
+  const margin = {top:10,right:labelPad,bottom:10,left:60};
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+
+  const pane = svg.append('g').attr('class','tree-pane'); // this group will be panned/zoomed
+const g = pane.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+// init or rebind zoom (drag to pan, wheel/pinch to zoom)
+if (!treeZoom) {
+  treeZoom = d3.zoom()
+    .scaleExtent([0.6, 6])
+    .on('zoom', (ev) => {
+      d3.select('#treeSVG g.tree-pane').attr('transform', ev.transform);
+      treeZoomTransform = ev.transform;
+    });
+}
+svg.call(treeZoom)                      // attach behavior
+   .call(treeZoom.transform, treeZoomTransform); // restore previous view
+
+
+  // vertical positions via d3.cluster; horizontal = cumulative length
+  d3.cluster().size([innerH, 1])(root);
+  const x = d3.scaleLinear().domain([0, maxCum]).range([0, innerW]);
+  root.each(n => { n.y = x(n.data.cum||0); });
+
+  // Links
+  const link = d3.linkHorizontal().x(d => d.y).y(d => d.x);
+  g.selectAll('path.link')
+    .data(root.links())
+    .join('path')
+    .attr('class','link')
+    .attr('fill','none')
+    .attr('stroke','var(--muted)')
+    .attr('stroke-width', 2)
+    .attr('d', link);
+
+  // Nodes: leaves with cluster colours; internal small gray dots
+  const leaves = root.leaves();
+  // Leaves: shape consistent with legend
+const leafSel = g.selectAll('.leaf-shape')
+  .data(leaves)
+  .join('g')
+  .attr('class','leaf-shape')
+  .attr('transform', d => `translate(${d.y},${d.x})`);
+
+leafSel.each(function(d){
+  const key = d.data.name;
+  const shape = (key === 'Unclustered')
+    ? 'triangle'
+    : clusterShapeByIndex(Math.max(0, clustArrSorted.indexOf(key)));
+  const color = (key === 'Unclustered') ? '#8a8f98' : (colorForCluster ? colorForCluster(key) : '#888');
+
+  const sel = d3.select(this);
+  sel.selectAll('*').remove(); // clear any prior shape
+
+  if(shape==='circle'){
+    sel.append('circle').attr('r',5).attr('fill',color);
+  }else if(shape==='square'){
+    sel.append('rect').attr('x',-5).attr('y',-5).attr('width',10).attr('height',10).attr('fill',color);
+  }else if(shape==='diamond'){
+    sel.append('rect').attr('x',-5).attr('y',-5).attr('width',10).attr('height',10)
+       .attr('transform','rotate(45)').attr('fill',color);
+  }else if(shape==='triangle'){
+    sel.append('polygon').attr('points','0,-6 6,6 -6,6').attr('fill',color);
+  }
+});
+
+// Labels
+ g.selectAll('text.leaf')
+    .data(leaves)
+    .join('text')
+    .attr('x', d=>d.y + 8)
+    .attr('y', d=>d.x + 4)
+    .style('fill','var(--text)')
+    .style('font-size','12px')
+    .text(d=>d.data.name);
+
+  const internals = root.descendants().filter(d => d.children && d.children.length && !present.includes(d.data.name));
+  g.selectAll('circle.internal')
+    .data(internals)
+    .join('circle')
+    .attr('class','internal')
+    .attr('cx', d=>d.y)
+    .attr('cy', d=>d.x)
+    .attr('r', 2.5)
+    .attr('fill', '#9ca3af');
+
+  // Legend
+  const legend = d3.select("#treeLegend");
+  legend.html(`<div class="chip">Tips colored by cluster; vertical spacing is arbitrary; horizontal = cumulative branch length.</div>`);
+
+  // Similarity table for selected clusters
+  renderSimilarityTable(present);
+}
+
+/* ---------- Similarity table ---------- */
+function renderSimilarityTable(selectedLabels){
+  if(!geneticDist){ document.getElementById('simTableWrap').innerHTML = ''; return; }
+  const idx = selectedLabels.map(l => geneticDist.labels.indexOf(l));
+  const rows = [];
+  for(let i=0;i<idx.length;i++){
+    for(let j=i+1;j<idx.length;j++){
+      const a = selectedLabels[i], b = selectedLabels[j];
+      const d = geneticDist.matrix[idx[i]][idx[j]];
+      const sim = Math.max(0, Math.min(1, 1 - d)); // 0..1
+      rows.push({cluster_a:a, cluster_b:b, similarity: sim});
+    }
+  }
+  rows.sort((r1,r2)=> r2.similarity - r1.similarity);
+
+  const wrap = document.getElementById('simTableWrap');
+  if(rows.length===0){ wrap.innerHTML = '<div style="font-size:12px; color:var(--muted)">No pairs.</div>'; return; }
+
+  const table = document.createElement('table');
+  table.id = 'simTable';
+  table.innerHTML = `
+    <thead><tr><th>cluster_a</th><th>cluster_b</th><th>genetic similarity</th></tr></thead>
+    <tbody>
+      ${rows.map(r => `<tr><td>${r.cluster_a}</td><td>${r.cluster_b}</td><td>${(r.similarity*100).toFixed(1)}%</td></tr>`).join('')}
+    </tbody>`;
+  wrap.innerHTML = '';
+  wrap.appendChild(table);
+}
+
+/* ==================== Charts update wrapper ==================== */
+function updateCharts(){
+  const aligned = alignAxisToggle.checked;
+  const alignedDomain = aligned && currentDay ? monthKeysWindow(currentDay, 36) : null;
+  const gidA = districtSelectA.value || null;
+  const gidB = districtSelectB.value || null;
+  renderChartInto(CA, gidA, (gidToName.get(gidA)||''), alignedDomain);
+  renderChartInto(CB, gidB, (gidToName.get(gidB)||''), alignedDomain);
+}
+</script>
+</body>
+</html>
