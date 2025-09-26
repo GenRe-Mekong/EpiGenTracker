@@ -9,8 +9,8 @@
   :root{
     --bg:#1B1E28; --panel:#242836; --muted:#A5B1C2; --text:#EAEFF6;
     --chip:#27304A; --border:#3C3F4A; --mapbg:#171C2E;
-    --district-fill:#12172A; --district-stroke:#3F4C61; --district-weight:0.5;
-    --province-stroke:#9DA7B4; --province-weight:1.5;
+    --district-fill:#12172A; --district-stroke:#3F4C61; --district-weight:0.3;
+    --province-stroke:#9DA7B4; --province-weight:1;
     --label-badge-bg:rgba(0,0,0,.30); --label-badge-brd:rgba(255,255,255,.12); --label-color:#F1F3F5;
     --fade:0.22; --fade-stroke:0.35;
     --table-border:#2A3550;
@@ -20,15 +20,14 @@
   html.light{
     --bg:#F7F9FC; --panel:#FFFFFF; --muted:#6C7A89; --text:#212529;
     --chip:#EFF2F7; --border:#E3E7EF; --mapbg:#CDE2E2;
-    --district-fill:#FFFFFF; --district-stroke:#E4E4E4; --district-weight:0.5;
-    --province-stroke:#C4C4C4; --province-weight:1.5;
+    --district-fill:#FFFFFF; --district-stroke:#E4E4E4; --district-weight:0.3;
+    --province-stroke:#c1c8d1; --province-weight:1;
     --label-badge-bg:rgba(255,255,255,.70); --label-badge-brd:rgba(0,0,0,.15); --label-color:#1F2937;
 	--fade:0.35; --fade-stroke:0.60;
     --table-border:#E3E7EF;
 	--accent:#339AF0; --accent-contrast:#FFFFFF;
 	--tl-h: 56px; /* timeline bar height */
   }
-
   html, body {height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--text)}
   body{overflow-x:hidden;} /* ← remove horizontal scrollbar */
   #layout {display:grid; grid-template-rows: 1fr auto; height:100vh}
@@ -80,6 +79,17 @@
 }
   .legend-actions{display:flex; gap:6px; margin:6px 0}
   .legend-actions button{font-size:12px; padding:3px 6px; border:1px solid var(--border); background:transparent; color:var(--text); border-radius:6px; cursor:pointer}
+  .panel-header{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .panel-header h2{margin:0;}
+  .panel-hide-btn{padding:4px 8px; font-size:11px; border-radius:999px;}
+  .panel-toggle-button{position:absolute; top:16px; z-index:750; background:var(--panel); border:1px solid var(--border); color:var(--text); border-radius:999px; padding:4px 10px; font-size:11px; cursor:pointer; box-shadow:0 6px 14px rgba(0,0,0,.28);}
+  .panel-toggle-button:focus{outline:2px solid var(--accent); outline-offset:2px;}
+  #showLeftPanelBtn{left:16px; display:none;}
+  #showRightPanelBtn{right:16px; display:none;}
+  #leftPanel, #rightPanel{transition:transform .25s ease, opacity .25s ease;}
+  #leftPanel.is-hidden{transform:translateX(-120%); opacity:0; pointer-events:none;}
+  #rightPanel.is-hidden{transform:translateX(120%); opacity:0; pointer-events:none;}
+
 
   select, input, button{font:inherit}
 
@@ -122,10 +132,15 @@
   <div id="mapWrap">
     <div id="map"></div>
     <div id="dateTitle">—</div>
+    <button id="showLeftPanelBtn" class="panel-toggle-button btn" type="button">Show controls</button>
+    <button id="showRightPanelBtn" class="panel-toggle-button btn" type="button">Show charts</button>
 
     <!-- Left control panel -->
     <aside id="leftPanel" aria-label="Controls">
-      <h2>Data & Controls</h2>
+      <div class="panel-header">
+        <h2>Data & Controls</h2>
+        <button id="hideLeftPanelBtn" class="btn panel-hide-btn" type="button">Hide controls</button>
+      </div>
       <div class="ctrl"><label>Districts GeoJSON (ADM2)</label><input id="geojsonDistrictsFile" type="file" accept=".geojson,.json,application/geo+json" /></div>
       <div class="ctrl"><label>Provinces GeoJSON (ADM1)</label><input id="geojsonProvincesFile" type="file" accept=".geojson,.json,application/geo+json" /></div>
       <div class="ctrl"><label>Samples CSV</label><input id="csvFile" type="file" accept=".csv" /></div>
@@ -190,7 +205,10 @@
 
     <!-- Right panel: two charts + legend UNDER charts + align axis -->
     <aside id="rightPanel" aria-label="District charts">
-      <h2>District Trends (stacked by cluster)</h2>
+      <div class="panel-header">
+        <h2>District Trends (stacked by cluster)</h2>
+        <button id="hideRightPanelBtn" class="btn panel-hide-btn" type="button">Hide charts</button>
+      </div>
 
       <div class="ctrl">
         <label>District A</label>
@@ -360,6 +378,12 @@ const districtSelectA   = document.getElementById('districtSelectA');
 const districtSelectB   = document.getElementById('districtSelectB');
 const themeSelect       = document.getElementById('themeSelect');
 const alignAxisToggle   = document.getElementById('alignAxisToggle');
+const leftPanelEl      = document.getElementById('leftPanel');
+const rightPanelEl     = document.getElementById('rightPanel');
+const hideLeftPanelBtn  = document.getElementById('hideLeftPanelBtn');
+const hideRightPanelBtn = document.getElementById('hideRightPanelBtn');
+const showLeftPanelBtn  = document.getElementById('showLeftPanelBtn');
+const showRightPanelBtn = document.getElementById('showRightPanelBtn');
 const toggleProvLabels  = document.getElementById('toggleProvLabels');
 /* Legend */
 const legendBox         = document.getElementById('legendBox');
@@ -430,6 +454,51 @@ toggleProvLabels.addEventListener('change', ()=>{
   }
 });
 
+
+
+/* Panel toggle handlers */
+function setLeftPanelVisible(show){
+  if(!leftPanelEl || !showLeftPanelBtn || !hideLeftPanelBtn) return;
+  const visible = !!show;
+  leftPanelEl.classList.toggle('is-hidden', !visible);
+  leftPanelEl.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  showLeftPanelBtn.style.display = visible ? 'none' : 'inline-flex';
+  hideLeftPanelBtn.style.display = visible ? '' : 'none';
+  showLeftPanelBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+}
+function setRightPanelVisible(show){
+  if(!rightPanelEl || !showRightPanelBtn || !hideRightPanelBtn) return;
+  const visible = !!show;
+  rightPanelEl.classList.toggle('is-hidden', !visible);
+  rightPanelEl.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  showRightPanelBtn.style.display = visible ? 'none' : 'inline-flex';
+  hideRightPanelBtn.style.display = visible ? '' : 'none';
+  showRightPanelBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+}
+function focusWithoutScroll(el){
+  if(!el || typeof el.focus !== 'function') return;
+  try { el.focus({ preventScroll:true }); }
+  catch(_) { el.focus(); }
+}
+hideLeftPanelBtn.addEventListener('click', ()=>{
+  setLeftPanelVisible(false);
+  focusWithoutScroll(showLeftPanelBtn);
+});
+showLeftPanelBtn.addEventListener('click', ()=>{
+  setLeftPanelVisible(true);
+  focusWithoutScroll(hideLeftPanelBtn);
+});
+hideRightPanelBtn.addEventListener('click', ()=>{
+  setRightPanelVisible(false);
+  focusWithoutScroll(showRightPanelBtn);
+});
+showRightPanelBtn.addEventListener('click', ()=>{
+  setRightPanelVisible(true);
+  focusWithoutScroll(hideRightPanelBtn);
+});
+setLeftPanelVisible(true);
+setRightPanelVisible(true);
+
 /* ==================== Geo helpers ==================== */
 function normalizeKey(x){ return (x==null ? '' : String(x)).trim(); }
 function findGidKey(props){
@@ -464,36 +533,96 @@ function fmtDateFromDayInt(dayInt){
 }
 
 /* Random point inside district with bias near base point */
+function cloneLatLngPair(src){
+  if(!src) return null;
+  if(Array.isArray(src) && src.length >= 2){
+    const a = Number(src[0]);
+    const b = Number(src[1]);
+    if(!isNaN(a) && !isNaN(b)) return [a, b];
+  }
+  if(typeof src === 'object'){
+    if(typeof src.lat === 'number' && typeof src.lng === 'number'){
+      return [src.lat, src.lng];
+    }
+    if(typeof src.latitude === 'number' && typeof src.longitude === 'number'){
+      return [src.latitude, src.longitude];
+    }
+    if(typeof src[0] === 'number' && typeof src[1] === 'number'){
+      const a = Number(src[0]);
+      const b = Number(src[1]);
+      if(!isNaN(a) && !isNaN(b)) return [a, b];
+    }
+  }
+  return null;
+}
+
 function randomPointInPolygon(polygon){
   let pt; const bbox = turf.bbox(polygon);
   do { pt = turf.randomPoint(1, { bbox }).features[0]; }
   while (!turf.booleanPointInPolygon(pt, polygon));
   return pt.geometry.coordinates; // [lon, lat]
 }
-function pointNearBaseInPolygon(polygon, baseLatLng, meters){
-  const km = Math.max(0, meters) / 1000;
-  const basePt = turf.point([baseLatLng[1], baseLatLng[0]]);
-  const bbox = turf.bbox(polygon);
-  for(let i=0;i<80;i++){
-    const cand = turf.randomPoint(1, { bbox }).features[0];
-    if(!turf.booleanPointInPolygon(cand, polygon)) continue;
-    const dist = turf.distance(basePt, cand, {units:'kilometers'});
-    if(dist <= km) return cand.geometry.coordinates;
+
+function randomOffsetMeters(baseLatLng, meters){
+  const base = cloneLatLngPair(baseLatLng);
+  if(!base || !isFinite(meters) || meters <= 0){
+    return base;
   }
-  const baseLonLat = [baseLatLng[1], baseLatLng[0]];
+  const earthRadius = 6371000; // meters
+  const distance = Math.random() * meters;
+  const bearing = Math.random() * Math.PI * 2;
+  const latRad = base[0] * Math.PI / 180;
+  const lonRad = base[1] * Math.PI / 180;
+  const angDist = distance / earthRadius;
+  const sinLat = Math.sin(latRad);
+  const cosLat = Math.cos(latRad);
+  const sinAng = Math.sin(angDist);
+  const cosAng = Math.cos(angDist);
+  const newLatRad = Math.asin(sinLat * cosAng + cosLat * sinAng * Math.cos(bearing));
+  const newLonRad = lonRad + Math.atan2(Math.sin(bearing) * sinAng * cosLat, cosAng - sinLat * Math.sin(newLatRad));
+  return [
+    newLatRad * 180 / Math.PI,
+    ((newLonRad * 180 / Math.PI + 540) % 360) - 180
+  ];
+}
+
+function pointNearBaseInPolygon(polygon, baseLatLng, meters){
+  const base = cloneLatLngPair(baseLatLng);
+  if(!base){
+    return randomPointInPolygon(polygon);
+  }
+  for(let i=0;i<80;i++){
+    const candLatLng = randomOffsetMeters(base, meters);
+    if(!candLatLng){ break; }
+    if(!polygon){ return [candLatLng[1], candLatLng[0]]; }
+    const cand = turf.point([candLatLng[1], candLatLng[0]]);
+    if(turf.booleanPointInPolygon(cand, polygon)){
+      return [candLatLng[1], candLatLng[0]];
+    }
+  }
+  const baseLonLat = [base[1], base[0]];
+  if(!polygon){
+    return baseLonLat;
+  }
   if(turf.booleanPointInPolygon(turf.point(baseLonLat), polygon)) return baseLonLat;
   return randomPointInPolygon(polygon);
 }
+
 function jitterWithinDistrict(gid, baseLatLng){
   const feature = gidToFeature.get(gid);
-  if(!feature){ return baseLatLng; }
-  let coords;
-  if(isFinite(jitterMeters) && jitterMeters>0 && baseLatLng){
-    coords = pointNearBaseInPolygon(feature, baseLatLng, jitterMeters);
-  } else {
-    coords = randomPointInPolygon(feature);
+  const base = cloneLatLngPair(baseLatLng);
+  if(!feature){
+    return base || null;
   }
-  return [coords[1], coords[0]];
+  if(base && (!isFinite(jitterMeters) || jitterMeters <= 0)){
+    return [base[0], base[1]];
+  }
+  if(isFinite(jitterMeters) && jitterMeters>0 && base){
+    const coords = pointNearBaseInPolygon(feature, base, jitterMeters);
+    return [coords[1], coords[0]];
+  }
+  const coordsFallback = randomPointInPolygon(feature);
+  return [coordsFallback[1], coordsFallback[0]];
 }
 
 /* ==================== Config synced from inputs ==================== */
@@ -618,15 +747,19 @@ function loadCSV(rows){
 
     const latCSV = parseFloat(row.Latitude ?? row.latitude ?? row.lat);
     const lonCSV = parseFloat(row.Longitude ?? row.longitude ?? row.lon ?? row.lng);
-    let baseLatLng = (!isNaN(latCSV) && !isNaN(lonCSV)) ? [latCSV, lonCSV] : gidToCentroid.get(gid);
+    const csvHasCoords = !isNaN(latCSV) && !isNaN(lonCSV);
+    const baseLatLng = csvHasCoords
+      ? [latCSV, lonCSV]
+      : cloneLatLngPair(gidToCentroid.get(gid));
     if(!baseLatLng){ missingGIDs.add(gid); continue; }
 
     const ll = jitterWithinDistrict(gid, baseLatLng);
+    if(!ll){ missingGIDs.add(gid); continue; }
 
     const dayInt = Math.floor(date.getTime()/DAY_MS);
     const districtName = nameFromCsv || gidToName.get(gid) || gid;
 
-    samples.push({ gid, dayInt, cluster, latlng: ll, districtName });
+    samples.push({ gid, dayInt, cluster, baseLatLng: cloneLatLngPair(baseLatLng), latlng: ll, districtName });
     if(cluster) clusters.add(cluster);
     ok++;
   }
@@ -822,15 +955,27 @@ function clusterIsActive(name){
 /* ==================== Re-jitter ==================== */
 function reJitterAll(){
   samples.forEach(s=>{
-    const baseForBias = s.latlng || gidToCentroid.get(s.gid);
+    let baseForBias = cloneLatLngPair(s.baseLatLng);
+    if(!baseForBias){
+      const centroid = cloneLatLngPair(gidToCentroid.get(s.gid));
+      if(centroid){
+        baseForBias = centroid;
+      } else if(Array.isArray(s.latlng) && s.latlng.length >= 2){
+        baseForBias = [s.latlng[0], s.latlng[1]];
+      }
+      if(baseForBias){
+        s.baseLatLng = [baseForBias[0], baseForBias[1]];
+      }
+    }
+    if(!baseForBias){ return; }
     s.latlng = jitterWithinDistrict(s.gid, baseForBias);
   });
 }
-
 /* ==================== Scene & Charts ==================== */
 function updateScene(){
   if(currentDay==null) return;
-  const startDay = currentDay - (windowDays-1);
+  const lookbackDays = Math.max(windowDays, lifespanDays); // ensure lifespan filter has all required days
+  const startDay = currentDay - (lookbackDays - 1);
   const dateStr = fmtDateFromDayInt(currentDay);
   currentDateLabel.textContent = dateStr;
   dateTitle.textContent = dateStr;
@@ -1303,3 +1448,18 @@ function updateCharts(){
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
