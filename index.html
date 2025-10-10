@@ -12,6 +12,7 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
     <script src="https://unpkg.com/@mapbox/polylabel@1.1.0/polylabel.js"></script>
+
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
       :root {
@@ -385,7 +386,7 @@
         left: 16px;
       }
       #showRightPanelBtn {
-        right: 16px;
+        right: 50px;
       }
       #leftPanel,
       #rightPanel {
@@ -516,8 +517,89 @@
         color: var(--text);
       }
 
-      
-    </style>
+  /* Onboarding overlay + spotlight */
+  .tour-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 9998;
+    display: none;
+  }
+  .tour-spotlight {
+    position: absolute;
+    border: 2px solid rgba(255,255,255,0.7);
+    border-radius: 12px;
+    box-shadow: 0 0 0 20000px rgba(0,0,0,0.55);
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+  }
+.tour-tooltip {
+  position: fixed;              /* <-- needed so top/left from JS work */
+  z-index: 10000;               /* above backdrop (9998) and spotlight (9999) */
+  max-width: 520px;
+  padding: 16px 18px 14px;
+  line-height: 1.45;
+  background: var(--panel, #1F2937);
+  color: var(--text, #EAEFF6);
+  border: 1px solid var(--border, #3C3F4A);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  display: none;                /* default hidden; JS toggles to block */
+}
+.tour-tooltip h4 {
+  font-size: 18px;              /* larger title */
+  margin: 0 0 10px;
+}
+.tour-tooltip p {               /* clear space between text and buttons */
+  margin: 0 0 12px;
+}
+.tour-actions {                 /* ensure spacing below text */
+  margin-top: 10px;
+}
+.tour-actions button.link {     /* make skip clearly clickable */
+  cursor: pointer;
+  opacity: .9;
+}
+.tour-target-focus {            /* bring highlight ABOVE dim */
+  position: relative;
+  z-index: 10001;               /* > tooltip/backdrop z-index */
+  outline: 3px solid rgba(59,130,246,.65);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+  .tour-actions button.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .tour-actions button.link { background: transparent; border: none; text-decoration: underline; color: var(--muted,#A5B1C2); }
+
+  /* Subtle highlight when focusing a target */
+  .tour-target-focus { outline: 3px solid rgba(59,130,246,.65); outline-offset: 2px; border-radius: 10px; transition: outline-color .2s; }
+  /* Floating help FAB */
+.help-fab{
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  border: 1px solid var(--border, #3C3F4A);
+  background: var(--chip, #27304A);
+  color: var(--text, #EAEFF6);
+  font-weight: 700;
+  line-height: 34px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 10002; /* above backdrop/spotlight */
+}
+@keyframes fab-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,.55); }
+  70%  { box-shadow: 0 0 0 14px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+.help-fab.pulse {
+  animation: fab-pulse 2s ease-out infinite;
+}
+.help-fab:focus{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 2px; }
+
+</style>
   </head>
   <body>
     <div id="layout">
@@ -543,6 +625,7 @@
 
         <!-- Left control panel -->
         <aside id="leftPanel" aria-label="Controls">
+           <section id="DataSection">
           <div class="panel-header">
             <h2>Data</h2>
             <button
@@ -562,7 +645,7 @@
             />
           </div>
           <div class="ctrl">
-            <label>Provinces AMD1 (.geojson)</label
+            <label>Provinces ADM1 (.geojson)</label
             ><input
               id="geojsonProvincesFile"
               type="file"
@@ -570,7 +653,7 @@
             />
           </div>
           <div class="ctrl">
-            <label>Country AMD0 (.geojson)</label
+            <label>Country ADM0 (.geojson)</label
             ><input
               id="geojsonCountriesFile"
               type="file"
@@ -581,6 +664,7 @@
             <label>Sample Data (.csv)</label
             ><input id="csvFile" type="file" accept=".csv" />
           </div>
+          </section>
 
           <!-- Separator line -->
           <hr class="panel-separator">
@@ -643,41 +727,38 @@
 
           <!-- Genetic distances -->
           <div id="treePanel">
-            <h2>Genetic Similarity Tree</h2>
-            <div class="ctrl">
-              <label>Genetic distance (.tab)</label>
-              <input
-                id="tabFile"
-                type="file"
-                accept=".tab,.tsv,text/tab-separated-values,text/plain"
-              />
-            </div>
+            <section id="geneticTreeSection">
+  <h2>Genetic Similarity Tree</h2>
 
-            <!-- Toggle button -->
-            <div class="ctrl" style="margin-top: 6px">
-              <button id="treeToggle" class="btn">Show genetic tree</button>
-            </div>
+  <div class="ctrl">
+    <label>Genetic distance (.tab)</label>
+    <input
+      id="tabFile"
+      type="file"
+      accept=".tab,.tsv,text/tab-separated-values,text/plain"
+    />
+  </div>
 
-            <!-- Tree body (hidden by default) -->
-            <div id="treeBody" style="display: none">
-              <div
-                class="ctrl"
-                id="treeZoomCtrl"
-                style="gap: 6px; margin: 4px 0 6px 0"
-              >
-                <button id="treeZoomIn" class="btn" title="Zoom in">+</button>
-                <button id="treeZoomOut" class="btn" title="Zoom out">-</button>
-              </div>
-              <svg id="treeSVG"></svg>
-              <div
-                id="treeNote"
-                style="font-size: 12px; color: var(--muted); margin-top: 6px"
-              ></div>
-              <div
-                id="treeLegend"
-                style="margin-top: 6px; font-size: 12px"
-              ></div>
-            </div>
+  <!-- Toggle button -->
+  <div class="ctrl" style="margin-top: 6px">
+    <button id="treeToggle" class="btn">Show genetic tree</button>
+  </div>
+
+  <!-- Tree body (hidden by default) -->
+<div id="treeBody" style="display: none">
+  <div class="ctrl" id="treeZoomCtrl" style="gap: 6px; margin: 4px 0 6px 0">
+    <button id="treeZoomIn" class="btn" title="Zoom in">+</button>
+    <button id="treeZoomOut" class="btn" title="Zoom out">−</button>
+    <span class="chip" id="treeNote" aria-live="polite"></span>
+  </div>
+
+  <!-- The tree SVG canvas -->
+  <svg id="treeSVG" role="img" aria-label="Genetic similarity tree"></svg>
+
+  <!-- Legend under the tree -->
+  <div id="treeLegend" style="margin-top:6px;"></div>
+</div>
+</section>
 
           <!-- Collapsible similarity table -->
           <details id="simDetails">
@@ -781,7 +862,6 @@
             </div>
           </div>
           <div id="legendBox" style="margin-top: 6px; line-height: 1.4"></div>
-          </div>
         </aside>
 
         <div id="toast"></div>
@@ -3094,7 +3174,7 @@ const cluster =
         searchAInput.value = "";
         searchBInput.value = "";
         updateCharts();
-        updateCompareAreaList(); // keep compare search consistent
+        if (typeof updateCompareAreaList === 'function') updateCompareAreaList();
       });
 
       // Initialize the page
@@ -3102,5 +3182,273 @@ const cluster =
       setRightPanelVisible(true);
       applyTheme("light");
     </script>
+    <!-- Onboarding containers -->
+<div class="tour-backdrop" id="tour-backdrop"></div>
+<div class="tour-spotlight" id="tour-spotlight"></div>
+<div class="tour-tooltip" id="tour-tooltip" role="dialog" aria-live="polite"></div>
+<!-- Help / Replay Tutorial (floating ?) -->
+<button id="help-replay-tutorial" class="help-fab" type="button" title="Tutorial">?</button>
+<script>
+(function(){
+  // ----- CONFIG: 6-step tutorial -----
+  const steps = [
+    {
+      id: 'welcome',
+      selector: null, // centered modal, no target
+      title: 'Welcome to EpiGenTracker 👋',
+      html: `
+        <p>This app helps you explore genetic data across <b>space</b>, <b>time</b>, and <b>clusters</b>.</p>
+        <p>You can walk through a quick guide (~1 minute) or skip and start exploring.</p>
+      `,
+      primary: 'Start tutorial',
+      allowSkip: true,
+      placement: 'center'
+    },
+    {
+      id: 'load',
+      selector: '#DataSection',
+      title: 'Load your data 📂',
+      html: `
+        <p>Upload your <b>GeoJSON maps</b> and <b>sample data</b> to begin. </p>
+        <p> </p>
+        <p>Essential: </p>
+        <p> • ADM2.geojson </p>
+        <p> • Sample.csv </p> 
+
+      `,
+      primary: 'Next',
+      placement: 'right'
+    },
+    {
+      id: 'time-map',
+      selector: '#timelineBar',
+      title: 'Explore in time and space 🗺️',
+      html: `
+        <p>Drag or click the <b>timeline</b> to move through dates. The map updates as you go.</p>
+      `,
+      primary: 'Next',
+      placement: 'top'
+    },
+    {
+      id: 'trends',
+      selector: '#rightPanel',
+      title: 'Sample trends by group 📊',
+      html: `
+        <p>Select an area in the box aggregate by administration level. </p> 
+        <p> Compare <b>Temporal trends</b> between areas, stacked counts by group.</p>
+
+      `,
+      primary: 'Next',
+      placement: 'left'
+    },
+    {
+      id: 'tree',
+      selector: '#geneticTreeSection',
+      title: ' (Optional) Clusters & genetic tree 🧬',
+      html: `
+  <p>You can load a distance matrix to see the <b>genetic similarity tree</b>.</p>
+
+`,
+      primary: 'Next',
+      placement: 'right'
+    },
+    {
+      id: 'goodbye',
+      selector: null,
+      title: 'You’re ready 🎉',
+      html: `
+        <p>Explore your data freely — you can replay this tutorial anytime from the <b>?</b> button.</p>
+        <p>Tutorial: </p>
+      `,
+      primary: 'Start exploring',
+      secondary: 'Replay',
+      placement: 'center'
+    }
+  ];
+
+  // ----- Minimal tour engine (no external deps) -----
+  const lsKey = 'epigen_tour_completed_v1';
+  const backdrop = document.getElementById('tour-backdrop');
+  const spot = document.getElementById('tour-spotlight');
+  const tip = document.getElementById('tour-tooltip');
+  const helpBtn = document.getElementById('help-replay-tutorial');
+  // Add a gentle pulse to the ? button until the tutorial has been completed once
+if (helpBtn && localStorage.getItem(lsKey) !== '1') {
+  helpBtn.classList.add('pulse');
+}
+
+  let idx = 0;
+  let activeTargets = [];
+
+  function show(el){ el.style.display = 'block'; }
+  function hide(el){ el.style.display = 'none'; }
+  function clearFocus(){
+    activeTargets.forEach(t => t.classList.remove('tour-target-focus'));
+    activeTargets = [];
+    hide(spot);
+  }
+
+  function getFirstVisible(selectors){
+    // supports comma-separated list; returns the first visible element
+    const parts = selectors.split(',').map(s => s.trim());
+    for (const p of parts){
+      const el = document.querySelector(p);
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const visible = rect.width > 0 && rect.height > 0;
+      if (visible) return el;
+    }
+    return null;
+  }
+
+  function positionTooltip(target, placement){
+    const padding = 10;
+    const tr = target.getBoundingClientRect();
+    const tt = tip.getBoundingClientRect();
+
+    let top = window.scrollY + tr.top;
+    let left = window.scrollX + tr.left;
+
+    if (placement === 'top'){
+      top = window.scrollY + tr.top - tt.height - padding;
+      left = window.scrollX + tr.left + (tr.width - tt.width)/2;
+    } else if (placement === 'bottom'){
+      top = window.scrollY + tr.bottom + padding;
+      left = window.scrollX + tr.left + (tr.width - tt.width)/2;
+    } else if (placement === 'left'){
+      top = window.scrollY + tr.top + (tr.height - tt.height)/2;
+      left = window.scrollX + tr.left - tt.width - padding;
+    } else if (placement === 'right'){
+      top = window.scrollY + tr.top + (tr.height - tt.height)/2;
+      left = window.scrollX + tr.right + padding;
+    } else { // center
+      top = window.scrollY + (window.innerHeight - tt.height)/2;
+      left = window.scrollX + (window.innerWidth - tt.width)/2;
+    }
+
+    // keep inside viewport
+    top = Math.max(window.scrollY + 12, Math.min(top, window.scrollY + window.innerHeight - tt.height - 12));
+    left = Math.max(window.scrollX + 12, Math.min(left, window.scrollX + window.innerWidth - tt.width - 12));
+
+    tip.style.top = `${top}px`;
+    tip.style.left = `${left}px`;
+  }
+
+  function spotlight(target){
+    const r = target.getBoundingClientRect();
+    spot.style.display = 'block';
+    spot.style.top = `${window.scrollY + r.top - 8}px`;
+    spot.style.left = `${window.scrollX + r.left - 8}px`;
+    spot.style.width = `${r.width + 16}px`;
+    spot.style.height = `${r.height + 16}px`;
+  }
+
+  function renderStep(i){
+    clearFocus();
+    if (i < 0 || i >= steps.length){ endTour(true); return; }
+    idx = i;
+    show(backdrop); // ensure the dimmed overlay appears for every step
+    const s = steps[i];
+    tip.innerHTML = `
+      <h4>${s.title}</h4>
+      ${s.html}
+      <div class="tour-actions">
+        ${s.allowSkip ? '<button class="link" data-act="skip">Skip for now</button>' : ''}
+        ${s.secondary ? '<button data-act="secondary">'+s.secondary+'</button>' : ''}
+        <button class="primary" data-act="primary">${s.primary || 'Next'}</button>
+      </div>
+    `;
+
+    // Attach actions
+    tip.querySelectorAll('[data-act]').forEach(btn => {
+  btn.onclick = () => {
+    const act = btn.getAttribute('data-act');
+    if (act === 'primary') {
+      if (s.id === 'goodbye') endTour(true);
+      else renderStep(i + 1);
+    } else if (act === 'secondary') {
+      // For goodbye: replay; otherwise go back
+      if (s.id === 'goodbye') startTour(true);
+      else renderStep(Math.max(0, i - 1));
+    } else if (act === 'skip') {
+      // Exit without marking complete, so it will show next time
+      endTour(false);
+    }
+  };
+});
+
+    show(backdrop);
+    show(tip);
+    if (s.selector) {
+      hide(backdrop);      // don’t tint the whole screen
+      show(spot);
+    } else {
+      show(backdrop);      // only use the global dim when there’s no target
+      hide(spot);
+    }
+
+    // If there is a target to highlight
+    if (s.selector){
+      const target = getFirstVisible(s.selector);
+      if (target){
+        target.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+        target.classList.add('tour-target-focus');
+        activeTargets = [target];
+        spotlight(target);
+        show(spot);
+        // Position tooltip around target
+        tip.style.display = 'block'; // ensure size measured
+        positionTooltip(target, s.placement || 'bottom');
+      } else {
+        // No visible target found — center the tooltip
+        hide(spot);
+        tip.style.display = 'block';
+        positionTooltip(document.body, 'center');
+      }
+    } else {
+      // No selector — center message
+      hide(spot);
+      tip.style.display = 'block';
+      positionTooltip(document.body, 'center');
+    }
+  }
+
+  function startTour(){
+  // Always start step 0 and show the overlay
+  show(backdrop);
+  if (typeof helpBtn !== 'undefined' && helpBtn) {
+  helpBtn.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    startTour(); // no gating; always restarts
+  });
+}
+  renderStep(0);
+}
+
+  function endTour(){
+  hide(backdrop); hide(spot); hide(tip);
+  clearFocus();
+  // No localStorage writes; we want the tour every startup.
+}
+
+  // Close on ESC
+  window.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape'){ endTour(false); }
+  });
+  // Reposition on resize/scroll
+  window.addEventListener('resize', ()=>{ if (tip.style.display!=='none' && steps[idx]?.selector){
+    const t = getFirstVisible(steps[idx].selector); if (t){ positionTooltip(t, steps[idx].placement||'bottom'); spotlight(t); }
+  }});
+  window.addEventListener('scroll', ()=>{ if (tip.style.display!=='none' && steps[idx]?.selector){
+    const t = getFirstVisible(steps[idx].selector); if (t){ positionTooltip(t, steps[idx].placement||'bottom'); spotlight(t); }
+  }}, {passive:true});
+
+  // Hook up Help button
+  if (helpBtn) helpBtn.addEventListener('click', ()=>{ renderStep(0); });
+
+  // Auto-start for first-time users after page is fully ready
+  window.addEventListener('load', ()=>{ startTour(true); });
+})();
+</script>
   </body>
 </html>
