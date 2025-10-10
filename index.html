@@ -567,6 +567,17 @@
   outline-offset: 2px;
   border-radius: 10px;
 }
+.tour-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: large;
+}
+.tour-logo {
+  width: 120px;
+  max-width: 100%;
+  display: block;
+}
   .tour-actions button.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
   .tour-actions button.link { background: transparent; border: none; text-decoration: underline; color: var(--muted,#A5B1C2); }
 
@@ -3195,11 +3206,17 @@ const cluster =
     {
       id: 'welcome',
       selector: null, // centered modal, no target
-      title: 'Welcome to EpiGenTracker 👋',
+      title: ' <img class="tour-logo" src="assets/images/GenReMekongLogo.jpg" alt="GenRe-Mekong logo">',
       html: `
-        <p>This app helps you explore genetic data across <b>space</b>, <b>time</b>, and <b>clusters</b>.</p>
-        <p>You can walk through a quick guide (~1 minute) or skip and start exploring.</p>
-      `,
+      <div class="tour-heading">
+    <span><strong> Welcome to EpiGenTracker</strong> 👋</span>
+  </div>
+  <p>.</p>
+  <p>This app helps you explore genetic data across <b>space</b>, <b>time</b>, and <b>clusters</b>.</p>
+  <p>You can walk through a quick guide (~1 minute) or skip and start exploring.</p>
+  <p>.</p>
+`,
+
       primary: 'Start tutorial',
       allowSkip: true,
       placement: 'center'
