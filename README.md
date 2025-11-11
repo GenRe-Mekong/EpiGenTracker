@@ -20,6 +20,8 @@ Load your **sample CSV**, play through time, compare **two regions**, and (optio
 - **Genetic Tree (optional):** visualize pairwise similarity from a `.tab` distance matrix.  
 - **No backend needed:** works entirely offline in your browser.
 
+<img src="assets/images/Demo-20sec.gif" width="800" alt="Demo">
+
 ## ⚡ Quick Start
 1. **Access App:** https://genre-mekong.github.io/EpiGenTracker/  
 2. **Load Map:** Click **Load eastern GMS map (KH, LA, TH, VN)** or **upload your own GeoJSON layers (ADM0–ADM2)** <p> - (Details on how to prepare your own map will be updated soon).</p>  
