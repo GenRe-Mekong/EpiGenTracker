@@ -303,6 +303,12 @@
         font-size: 12px;
         color: var(--muted);
       }
+      .chip.success-chip {
+        background: rgba(34, 197, 94, 0.16);
+        border-color: rgba(34, 197, 94, 0.5);
+        color: #34d399;
+        font-weight: 600;
+      }
       .legend-row {
         display: flex;
         font-size: 13px;
@@ -610,6 +616,71 @@
 }
 .help-fab:focus{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 2px; }
 
+      #mapChoiceModal {
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 9, 22, 0.78);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 12000;
+      }
+      #mapChoiceModal.show {
+        display: flex;
+      }
+      .map-choice-card {
+        width: 100%;
+        max-width: 480px;
+        background: var(--panel);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 28px 26px;
+        box-shadow: var(--shadow-elevated);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .map-choice-card h3 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .map-choice-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 14px;
+      }
+      .map-choice-actions {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .map-choice-card button {
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 120ms ease, transform 120ms ease;
+      }
+      .map-choice-card button.primary {
+        background: var(--color-accent);
+        color: var(--accent-contrast);
+        border-color: var(--color-accent);
+      }
+      .map-choice-card button.secondary {
+        background: var(--chip);
+        color: var(--text);
+      }
+      .map-choice-card button:disabled {
+        opacity: 0.55;
+        cursor: progress;
+      }
+
 </style>
   </head>
   <body>
@@ -647,29 +718,38 @@
               Hide controls
             </button>
           </div>
-          <div class="ctrl">
-            <label>Districts ADM2 (.geojson)</label
-            ><input
-              id="geojsonDistrictsFile"
-              type="file"
-              accept=".geojson,.json,application/geo+json"
-            />
+          <div id="geojsonInputGroup">
+            <div class="ctrl">
+              <label>Districts ADM2 (.geojson)</label
+              ><input
+                id="geojsonDistrictsFile"
+                type="file"
+                accept=".geojson,.json,application/geo+json"
+              />
+            </div>
+            <div class="ctrl">
+              <label>Provinces ADM1 (.geojson)</label
+              ><input
+                id="geojsonProvincesFile"
+                type="file"
+                accept=".geojson,.json,application/geo+json"
+              />
+            </div>
+            <div class="ctrl">
+              <label>Country ADM0 (.geojson)</label
+              ><input
+                id="geojsonCountriesFile"
+                type="file"
+                accept=".geojson,.json,application/geo+json"
+              />
+            </div>
           </div>
-          <div class="ctrl">
-            <label>Provinces ADM1 (.geojson)</label
-            ><input
-              id="geojsonProvincesFile"
-              type="file"
-              accept=".geojson,.json,application/geo+json"
-            />
-          </div>
-          <div class="ctrl">
-            <label>Country ADM0 (.geojson)</label
-            ><input
-              id="geojsonCountriesFile"
-              type="file"
-              accept=".geojson,.json,application/geo+json"
-            />
+          <div
+            id="easternGmsNotice"
+            class="chip success-chip"
+            style="display: none"
+          >
+            Eastern GMS map successfully loaded.
           </div>
           <div class="ctrl">
             <label>Sample Data (.csv)</label
@@ -848,12 +928,19 @@
           <svg id="chartB"></svg>
 
           <div class="ctrl" style="margin-top: 6px">
-            <label>Align axis (rolling 36 months)</label>
+            <label for="quarterToggle">Aggregate by quarter (3 months)</label>
+            <input id="quarterToggle" type="checkbox" />
+          </div>
+
+          <div class="ctrl" style="margin-top: 6px">
+            <label id="alignAxisLabel" for="alignAxisToggle"
+              >Align axis (rolling 36 months)</label
+            >
             <input id="alignAxisToggle" type="checkbox" checked />
           </div>
 
           <div style="margin-top: 6px" class="chip">
-            x: month | y: samples (cumulative to current date)
+            x: month (or quarter) | y: samples (cumulative to current date)
           </div>
 
           <!-- Legend under charts (click to multi-select) -->
@@ -876,6 +963,30 @@
         </aside>
 
         <div id="toast"></div>
+      </div>
+
+      <div
+        id="mapChoiceModal"
+        aria-hidden="true"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mapChoiceTitle"
+      >
+        <div class="map-choice-card">
+          <h3 id="mapChoiceTitle">Choose a starting map</h3>
+          <p>
+            Load the bundled Eastern GMS administrative layers or continue with
+            your own GeoJSON uploads.
+          </p>
+          <div class="map-choice-actions">
+            <button type="button" class="primary" id="loadEasternGmsBtn">
+              Load eastern GMS map (KH, LA, TH, VN)
+            </button>
+            <button type="button" class="secondary" id="loadCustomMapBtn">
+              Load my own map
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Player buttons at bottom left -->
@@ -1060,6 +1171,7 @@
         },
         charts: {
           aggLevel: "adm2", // adm2 | adm1 | adm0
+          useQuarter: false,
         },
         map: {
           instance: null,
@@ -1127,6 +1239,8 @@
       const geojsonCountriesInput = document.getElementById(
         "geojsonCountriesFile"
       );
+      const geojsonInputGroup = document.getElementById("geojsonInputGroup");
+      const easternGmsNotice = document.getElementById("easternGmsNotice");
       const csvInput = document.getElementById("csvFile");
       const tabInput = document.getElementById("tabFile");
       const playBtn = document.getElementById("playBtn");
@@ -1145,6 +1259,8 @@
       const districtSelectB = document.getElementById("districtSelectB");
       const themeSelect = document.getElementById("themeSelect");
       const alignAxisToggle = document.getElementById("alignAxisToggle");
+      const alignAxisLabel = document.getElementById("alignAxisLabel");
+      const quarterToggle = document.getElementById("quarterToggle");
       const leftPanelEl = document.getElementById("leftPanel");
       const rightPanelEl = document.getElementById("rightPanel");
       const hideLeftPanelBtn = document.getElementById("hideLeftPanelBtn");
@@ -1176,10 +1292,68 @@
       const searchBInput = document.getElementById("searchB");
       const areaListA = document.getElementById("areaListA");
       const areaListB = document.getElementById("areaListB");
+      const mapChoiceModal = document.getElementById("mapChoiceModal");
+      const loadEasternMapBtn = document.getElementById("loadEasternGmsBtn");
+      const loadCustomMapBtn = document.getElementById("loadCustomMapBtn");
 
       const chartSelection = { A: null, B: null };
+      let usingEasternGms = false;
+      let mapChoicePrompted = false;
+      const EASTERN_GMS_FILES = {
+        adm2: "https://genre-mekong.github.io/EpiGenTracker/maps/eastern-gms/adm2.json",
+        adm1: "https://genre-mekong.github.io/EpiGenTracker/maps/eastern-gms/adm1.json",
+        adm0: "https://genre-mekong.github.io/EpiGenTracker/maps/eastern-gms/adm0.json",
+      };
+      const easternBtnDefaultLabel =
+        (loadEasternMapBtn && loadEasternMapBtn.textContent.trim()) ||
+        "Load eastern GMS map (KH, LA, TH, VN)";
 
       /* ==================== UI Helpers ==================== */
+      function reflectMapSourceState() {
+        if (geojsonInputGroup) {
+          geojsonInputGroup.style.display = usingEasternGms ? "none" : "";
+        }
+        if (easternGmsNotice) {
+          easternGmsNotice.style.display = usingEasternGms
+            ? "inline-flex"
+            : "none";
+        }
+      }
+
+      function showMapChoiceModal() {
+        if (!mapChoiceModal) return;
+        mapChoiceModal.classList.add("show");
+        mapChoiceModal.setAttribute("aria-hidden", "false");
+      }
+
+      function hideMapChoiceModal() {
+        if (!mapChoiceModal) return;
+        mapChoiceModal.classList.remove("show");
+        mapChoiceModal.setAttribute("aria-hidden", "true");
+      }
+
+      function promptForMapChoice() {
+        if (mapChoicePrompted) return;
+        mapChoicePrompted = true;
+        showMapChoiceModal();
+      }
+
+      reflectMapSourceState();
+
+      if (loadCustomMapBtn) {
+        loadCustomMapBtn.addEventListener("click", () => {
+          usingEasternGms = false;
+          reflectMapSourceState();
+          hideMapChoiceModal();
+        });
+      }
+
+      if (loadEasternMapBtn) {
+        loadEasternMapBtn.addEventListener("click", () => {
+          loadEasternGmsBundle();
+        });
+      }
+
       function showToast(msg, ms = 2800) {
         toast.textContent = msg;
         toast.style.display = "block";
@@ -1742,16 +1916,11 @@
       }
 
       /* ==================== Loaders ==================== */
-      // Districts (ADM2)
-      geojsonDistrictsInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const text = await file.text();
-        let gj;
-        try {
-          gj = JSON.parse(text);
-        } catch (err) {
-          showToast("Invalid Districts GeoJSON");
+      function loadDistrictGeoJSON(gj, { silent = false } = {}) {
+        if (!gj || !Array.isArray(gj.features)) {
+          if (!silent) {
+            showToast("Districts GeoJSON is missing a features array.");
+          }
           return;
         }
 
@@ -1787,7 +1956,7 @@
         const ctryNameGuess = findCountryNameKey(proto);
         const ctryIdGuess = findCountryId(proto);
 
-        if (!gidKey) {
+        if (!gidKey && !silent) {
           showToast(
             "?? Could not find a GID-like property in Districts GeoJSON."
           );
@@ -1795,7 +1964,7 @@
 
         gj.features.forEach((f) => {
           const props = f.properties || {};
-          const gid2 = normalizeKey(props[gidKey]);
+          const gid2 = gidKey ? normalizeKey(props[gidKey]) : null;
           if (!gid2) return;
 
           const nm2 = nameKey ? normalizeKey(props[nameKey]) : gid2;
@@ -1837,23 +2006,18 @@
           if (adm0id) dataState.idToName.set(adm0id, adm0nm || adm0id);
         });
 
-        showToast(
-          `Loaded ${
-            gj.features?.length || 0
-          } districts. You can add provinces and CSV.`
-        );
-      });
+        if (!silent) {
+          showToast(
+            `Loaded ${
+              gj.features?.length || 0
+            } districts. You can add provinces and CSV.`
+          );
+        }
+      }
 
-      // Provinces (ADM1) - thick border + labels
-      geojsonProvincesInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const text = await file.text();
-        let gj;
-        try {
-          gj = JSON.parse(text);
-        } catch (err) {
-          showToast("Invalid Provinces GeoJSON");
+      function loadProvinceGeoJSON(gj, { silent = false } = {}) {
+        if (!gj || !Array.isArray(gj.features)) {
+          if (!silent) showToast("Provinces GeoJSON is missing a features array.");
           return;
         }
 
@@ -1871,7 +2035,6 @@
           }),
         }).addTo(mapState.instance);
 
-        // Province labels
         const proto =
           (gj.features && gj.features[0] && gj.features[0].properties) || {};
         const nmKey =
@@ -1894,27 +2057,21 @@
           mapState.provinceLabelsLayer.addLayer(lbl);
         });
 
-        if (toggleProvLabels.checked) {
+        if (toggleProvLabels && toggleProvLabels.checked) {
           if (!mapState.instance.hasLayer(mapState.provinceLabelsLayer))
             mapState.provinceLabelsLayer.addTo(mapState.instance);
-        } else {
-          if (mapState.instance.hasLayer(mapState.provinceLabelsLayer))
-            mapState.instance.removeLayer(mapState.provinceLabelsLayer);
+        } else if (mapState.instance.hasLayer(mapState.provinceLabelsLayer)) {
+          mapState.instance.removeLayer(mapState.provinceLabelsLayer);
         }
 
-        showToast(`Loaded ${gj.features?.length || 0} provinces.`);
-      });
+        if (!silent) {
+          showToast(`Loaded ${gj.features?.length || 0} provinces.`);
+        }
+      }
 
-      // Countries (ADM0) - borders + labels
-      geojsonCountriesInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const textFile = await file.text();
-        let gj;
-        try {
-          gj = JSON.parse(textFile);
-        } catch (err) {
-          showToast("Invalid Countries GeoJSON");
+      function loadCountryGeoJSON(gj, { silent = false } = {}) {
+        if (!gj || !Array.isArray(gj.features)) {
+          if (!silent) showToast("Countries GeoJSON is missing a features array.");
           return;
         }
 
@@ -1936,7 +2093,7 @@
           }),
         });
 
-        if (toggleCountryBorders.checked) {
+        if (toggleCountryBorders && toggleCountryBorders.checked) {
           geoState.countriesLayer.addTo(mapState.instance);
         }
 
@@ -1966,12 +2123,11 @@
           mapState.countryLabelsLayer.addLayer(lbl);
         });
 
-        if (toggleCountryLabels.checked) {
+        if (toggleCountryLabels && toggleCountryLabels.checked) {
           if (!mapState.instance.hasLayer(mapState.countryLabelsLayer))
             mapState.countryLabelsLayer.addTo(mapState.instance);
-        } else {
-          if (mapState.instance.hasLayer(mapState.countryLabelsLayer))
-            mapState.instance.removeLayer(mapState.countryLabelsLayer);
+        } else if (mapState.instance.hasLayer(mapState.countryLabelsLayer)) {
+          mapState.instance.removeLayer(mapState.countryLabelsLayer);
         }
 
         try {
@@ -1980,8 +2136,102 @@
           });
         } catch (_) {}
 
-        showToast(`Loaded ${gj.features?.length || 0} countries.`);
+        if (!silent) {
+          showToast(`Loaded ${gj.features?.length || 0} countries.`);
+        }
+      }
+
+      // Districts (ADM2)
+      geojsonDistrictsInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        let gj;
+        try {
+          const text = await file.text();
+          gj = JSON.parse(text);
+        } catch (err) {
+          showToast("Invalid Districts GeoJSON");
+          return;
+        }
+        loadDistrictGeoJSON(gj);
+        usingEasternGms = false;
+        reflectMapSourceState();
       });
+
+      // Provinces (ADM1) - thick border + labels
+      geojsonProvincesInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        let gj;
+        try {
+          const text = await file.text();
+          gj = JSON.parse(text);
+        } catch (err) {
+          showToast("Invalid Provinces GeoJSON");
+          return;
+        }
+        loadProvinceGeoJSON(gj);
+      });
+
+      // Countries (ADM0) - borders + labels
+      geojsonCountriesInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        let gj;
+        try {
+          const textFile = await file.text();
+          gj = JSON.parse(textFile);
+        } catch (err) {
+          showToast("Invalid Countries GeoJSON");
+          return;
+        }
+        loadCountryGeoJSON(gj);
+      });
+
+      async function loadEasternGmsBundle() {
+        if (loadEasternMapBtn) {
+          loadEasternMapBtn.disabled = true;
+          loadEasternMapBtn.textContent = "Loading...";
+        }
+        try {
+          const [adm2, adm1, adm0] = await Promise.all(
+            ["adm2", "adm1", "adm0"].map((level) => {
+              const url = EASTERN_GMS_FILES[level];
+              if (!url) {
+                throw new Error(`Missing download URL for Eastern GMS ${level}`);
+              }
+              return fetch(url).then((resp) => {
+                if (!resp.ok) {
+                  throw new Error(`Failed to load ${url} (${resp.status})`);
+                }
+                return resp.json();
+              });
+            })
+          );
+          loadDistrictGeoJSON(adm2, { silent: true });
+          loadProvinceGeoJSON(adm1, { silent: true });
+          loadCountryGeoJSON(adm0, { silent: true });
+          usingEasternGms = true;
+          reflectMapSourceState();
+          hideMapChoiceModal();
+          if (geojsonDistrictsInput) geojsonDistrictsInput.value = "";
+          if (geojsonProvincesInput) geojsonProvincesInput.value = "";
+          if (geojsonCountriesInput) geojsonCountriesInput.value = "";
+          showToast("Eastern GMS map successfully loaded.");
+        } catch (err) {
+          console.error("Eastern GMS preload failed", err);
+          showToast(
+            "Failed to load Eastern GMS files from GitHub. Please verify the release URLs are reachable."
+          );
+          usingEasternGms = false;
+          reflectMapSourceState();
+        } finally {
+          if (loadEasternMapBtn) {
+            loadEasternMapBtn.disabled = false;
+            loadEasternMapBtn.textContent = easternBtnDefaultLabel;
+          }
+        }
+      }
 
       /* ==================== CSV loader ==================== */
       csvInput.addEventListener("change", async (e) => {
@@ -2234,6 +2484,8 @@ const cluster =
         if (treeToggle) treeToggle.textContent = "Show genetic tree";
         document.getElementById("simTableWrap").innerHTML = "";
         showToast("Cleared. Load new files.");
+        usingEasternGms = false;
+        reflectMapSourceState();
       });
 
       speedDaysInput.addEventListener("change", () => {
@@ -2254,7 +2506,7 @@ const cluster =
       windowDaysInput.addEventListener("change", () => {
         timelineState.windowDays = Math.max(
           1,
-          parseInt(windowDaysInput.value || "21", 10)
+          parseInt(windowDaysInput.value || "24", 10)
         );
         updateScene();
       });
@@ -2262,7 +2514,7 @@ const cluster =
       lifespanDaysInput.addEventListener("change", () => {
         timelineState.lifespanDays = Math.max(
           1,
-          parseInt(lifespanDaysInput.value || "21", 10)
+          parseInt(lifespanDaysInput.value || "24", 10)
         );
         updateScene();
       });
@@ -2528,6 +2780,15 @@ const cluster =
       districtSelectA.addEventListener("change", updateCharts);
       districtSelectB.addEventListener("change", updateCharts);
       alignAxisToggle.addEventListener("change", updateCharts);
+      if (quarterToggle) {
+        quarterToggle.checked = appState.charts.useQuarter;
+        quarterToggle.addEventListener("change", () => {
+          appState.charts.useQuarter = quarterToggle.checked;
+          updateAlignAxisLabelText();
+          updateCharts();
+        });
+      }
+      updateAlignAxisLabelText();
 
       function monthKeyFromDayInt(dayInt) {
         const dt = new Date(dayInt * DAY_MS);
@@ -2535,6 +2796,12 @@ const cluster =
           2,
           "0"
         )}`;
+      }
+
+      function quarterKeyFromDayInt(dayInt) {
+        const dt = new Date(dayInt * DAY_MS);
+        const quarter = Math.floor(dt.getUTCMonth() / 3) + 1;
+        return `${dt.getUTCFullYear()}-Q${quarter}`;
       }
 
       function monthKeysWindow(endDayInt, n = 36) {
@@ -2552,6 +2819,39 @@ const cluster =
           );
         }
         return keys;
+      }
+
+      function quarterKeysWindow(endDayInt, n = 24) {
+        const end = new Date(endDayInt * DAY_MS);
+        let year = end.getUTCFullYear();
+        let quarter = Math.floor(end.getUTCMonth() / 3) + 1;
+        const keys = [];
+        for (let i = 0; i < n; i++) {
+          keys.push(`${year}-Q${quarter}`);
+          quarter -= 1;
+          if (quarter === 0) {
+            quarter = 4;
+            year -= 1;
+            if (year < 0) break;
+          }
+        }
+        return keys.reverse();
+      }
+
+      function formatTimeBucketLabel(value) {
+        if (!value) return "";
+        if (value.includes("-Q")) {
+          const [year, quarter] = value.split("-Q");
+          return `Q${quarter}-${year}`;
+        }
+        return value;
+      }
+
+      function updateAlignAxisLabelText() {
+        if (!alignAxisLabel) return;
+        alignAxisLabel.textContent = appState.charts.useQuarter
+          ? "Align axis (rolling 24 quarters)"
+          : "Align axis (rolling 36 months)";
       }
 
       function renderChartInto(
@@ -2585,11 +2885,14 @@ const cluster =
           );
         }
 
+        const periodKeyFn = appState.charts.useQuarter
+          ? quarterKeyFromDayInt
+          : monthKeyFromDayInt;
         const months =
           monthsDomain && monthsDomain.length
             ? monthsDomain.slice()
             : Array.from(
-                new Set(rowsAll.map((r) => monthKeyFromDayInt(r.dayInt)))
+                new Set(rowsAll.map((r) => periodKeyFn(r.dayInt)))
               ).sort();
 
         const clusterNames = Array.from(
@@ -2603,7 +2906,7 @@ const cluster =
           ])
         );
         rowsAll.forEach((r) => {
-          const mk = monthKeyFromDayInt(r.dayInt);
+          const mk = periodKeyFn(r.dayInt);
           if (!monthToCounts.has(mk)) {
             if (!monthsDomain) {
               monthToCounts.set(
@@ -2617,7 +2920,7 @@ const cluster =
         });
         months.sort();
         const data = months.map((m) => ({
-          month: m,
+          bucket: m,
           ...(monthToCounts.get(m) || {}),
         }));
 
@@ -2647,21 +2950,23 @@ const cluster =
 
         layerG
           .selectAll("rect")
-          .data((d) =>
-            d.map((v) => ({
-              key: d.key,
-              month: v.data.month,
-              y0: v[0],
-              y1: v[1],
-            }))
-          )
-          .join("rect")
-          .attr("x", (d) => x(d.month))
+              .data((d) =>
+                d.map((v) => ({
+                  key: d.key,
+                  bucket: v.data.bucket,
+                  y0: v[0],
+                  y1: v[1],
+                }))
+              )
+              .join("rect")
+              .attr("x", (d) => x(d.bucket))
           .attr("y", (d) => y(d.y1))
           .attr("height", (d) => Math.max(0, y(d.y0) - y(d.y1)))
           .attr("width", x.bandwidth());
 
-        gXAxis.call(d3.axisBottom(x).tickValues(months));
+        gXAxis.call(
+          d3.axisBottom(x).tickValues(months).tickFormat(formatTimeBucketLabel)
+        );
         gXAxis
           .selectAll("text")
           .attr("transform", "rotate(-90)")
@@ -2697,7 +3002,9 @@ const cluster =
         const aligned = alignAxisToggle.checked;
         const alignedDomain =
           aligned && timelineState.currentDay != null
-            ? monthKeysWindow(timelineState.currentDay, 36)
+            ? appState.charts.useQuarter
+              ? quarterKeysWindow(timelineState.currentDay, 24)
+              : monthKeysWindow(timelineState.currentDay, 36)
             : null;
 
         const idA = chartSelection.A;
@@ -3206,15 +3513,15 @@ const cluster =
     {
       id: 'welcome',
       selector: null, // centered modal, no target
-      title: ' <img class="tour-logo" src="assets/images/GenReMekongLogo.jpg" alt="GenRe-Mekong logo">',
+      title: ' <img class="tour-logo" src="https://genre-mekong.github.io/EpiGenTracker/assets/images/GenReMekongLogo.jpg" alt="GenRe-Mekong logo">',
       html: `
       <div class="tour-heading">
     <span><strong> Welcome to EpiGenTracker</strong> 👋</span>
   </div>
-  <p>.</p>
+  <p>_________________________________________________________________________</p>
   <p>This app helps you explore genetic data across <b>space</b>, <b>time</b>, and <b>clusters</b>.</p>
   <p>You can walk through a quick guide (~1 minute) or skip and start exploring.</p>
-  <p>.</p>
+  <p>_________________________________________________________________________</p>
 `,
 
       primary: 'Start tutorial',
@@ -3362,7 +3669,11 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
 
   function renderStep(i){
     clearFocus();
-    if (i < 0 || i >= steps.length){ endTour(true); return; }
+    if (i < 0 || i >= steps.length){
+      endTour();
+      promptForMapChoice();
+      return;
+    }
     idx = i;
     show(backdrop); // ensure the dimmed overlay appears for every step
     const s = steps[i];
@@ -3381,15 +3692,20 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
   btn.onclick = () => {
     const act = btn.getAttribute('data-act');
     if (act === 'primary') {
-      if (s.id === 'goodbye') endTour(true);
-      else renderStep(i + 1);
+      if (s.id === 'goodbye') {
+        endTour();
+        promptForMapChoice();
+      } else {
+        renderStep(i + 1);
+      }
     } else if (act === 'secondary') {
       // For goodbye: replay; otherwise go back
       if (s.id === 'goodbye') startTour(true);
       else renderStep(Math.max(0, i - 1));
     } else if (act === 'skip') {
       // Exit without marking complete, so it will show next time
-      endTour(false);
+      endTour();
+      promptForMapChoice();
     }
   };
 });
@@ -3450,7 +3766,7 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
 
   // Close on ESC
   window.addEventListener('keydown', (e)=>{
-    if (e.key === 'Escape'){ endTour(false); }
+    if (e.key === 'Escape'){ endTour(); }
   });
   // Reposition on resize/scroll
   window.addEventListener('resize', ()=>{ if (tip.style.display!=='none' && steps[idx]?.selector){
