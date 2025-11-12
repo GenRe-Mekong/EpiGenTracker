@@ -26,7 +26,7 @@ Load your **sample CSV**, play through time, compare **two regions**, and (optio
 1. **Access App:** https://genre-mekong.github.io/EpiGenTracker/  
 2. **Load Map:** Click **Load eastern GMS map (KH, LA, TH, VN)** or **upload your own GeoJSON layers (ADM0–ADM2)** <p> - (Details on how to prepare your own map will be updated soon).</p>  
 3. **Load Sample Data (.csv)** → the map animates over time. <p> - (Details on how to prepare your data will be updated soon) </p>
-4. **😀 Explore Data!** <p></p>
+4. **😀 Explore Data!** → Aggregate temporal trend by region, zoom in and out, track specific labels. <p></p>
 5. *(Optional)* Load **Genetic Distance (.tab)** to enable the similarity tree.
 
 ## 📁 Input File Formats
