@@ -10,6 +10,16 @@
 [![Run: Browser only](https://img.shields.io/badge/run-browser_only-brightgreen)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
+### Table of Contents
+-- [✨ What it is](#-what-it-is) 
+-- [⚡ Quick Start](#-quick-start) 
+-- [📁 Input File Formats](#-input-file-formats) 
+-- [🧭 Using the Interface](#-using-the-interface) 
+-- [📚 Citation & Author](#-citation--author) --
+
+
+
+
 ## ✨ What it is
 EpiGenTracker turns tabular data (.csv) into an interactive map–timeline–chart visualisation.  
 Load your **sample CSV**, play through time, compare **two regions**, and (optionally) explore a **genetic similarity tree**.
