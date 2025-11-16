@@ -72,9 +72,9 @@ VNM.2.3_1,2023-02-10,Unclustered
 - Upload .tab file to render Neighbor-Joining tree
 - Use + / − to zoom
 
-## 📚 Citation & Acknowledgements
+## 📚 Citation & Author
 If you use EpiGenTracker in your work, please cite:
 > GenRe-Mekong. EpiGenTracker: An interactive browser app for genetic epidemiology data visualization. 2025. https://github.com/GenRe-Mekong/EpiGenTracker
 
-Acknowledgements:
+✨ Developed by **Varanya Wasakul** with support from AI-assisted development tools
 
