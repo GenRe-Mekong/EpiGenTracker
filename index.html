@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>
-      Genetic Epidemiology - Map + Timeline + Dual District Charts + Genetic
+      Genetic Epidemiology - Map + Timeline + Charts + Genetic
       Tree
     </title>
     <link
@@ -350,6 +350,28 @@
         border-radius: 6px;
         cursor: pointer;
       }
+      .legend-grouping {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .legend-grouping label {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .legend-grouping select {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--text);
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+      .legend-grouping select:disabled {
+        opacity: 0.6;
+      }
       .panel-header {
         display: flex;
         align-items: center;
@@ -615,6 +637,90 @@
   animation: fab-pulse 2s ease-out infinite;
 }
 .help-fab:focus{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 2px; }
+      .help-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(7, 10, 22, 0.78);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 16000;
+      }
+      .help-modal.show {
+        display: flex;
+      }
+      .help-modal-card {
+        width: min(840px, 95vw);
+        max-height: 90vh;
+        overflow-y: auto;
+        background: var(--panel);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-elevated);
+        padding: 28px;
+      }
+      .help-modal-card header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+      .help-modal-card header h3 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .help-modal-close {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .help-modal-body section + section {
+        margin-top: 18px;
+      }
+      .help-modal-body h4 {
+        margin: 12px 0 6px;
+        font-size: 16px;
+      }
+      .help-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .help-table th,
+      .help-table td {
+        padding: 6px 8px;
+        border: 1px solid var(--table-border);
+        text-align: left;
+        vertical-align: top;
+      }
+      .help-table th {
+        background: var(--color-surface-alt);
+        font-weight: 600;
+      }
+      .help-modal-footer {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+      .help-modal-footer button {
+        padding: 8px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--chip);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .help-modal-footer button.primary {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        color: var(--accent-contrast);
+      }
 
       #mapChoiceModal {
         position: fixed;
@@ -959,6 +1065,12 @@
               <button id="legendToggleBtn">Hide</button>
             </div>
           </div>
+          <div class="legend-grouping">
+            <label for="groupingSelect">Marker grouping</label>
+            <select id="groupingSelect" disabled>
+              <option value="">Load data to enable</option>
+            </select>
+          </div>
           <div id="legendBox" style="margin-top: 6px; line-height: 1.4"></div>
         </aside>
 
@@ -984,6 +1096,148 @@
             </button>
             <button type="button" class="secondary" id="loadCustomMapBtn">
               Load my own map
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        id="helpModal"
+        class="help-modal"
+        aria-hidden="true"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="helpModalTitle"
+      >
+        <div class="help-modal-card">
+          <header>
+            <h3 id="helpModalTitle">EpiGenTracker quick guide</h3>
+            <button
+              type="button"
+              class="help-modal-close"
+              aria-label="Close help"
+              id="helpModalClose"
+            >
+              &times;
+            </button>
+          </header>
+          <p style="margin-top: 0">
+            Use this sheet as a refresher for what each control does.
+          </p>
+          <div class="help-modal-body">
+            <section>
+              <h4>🕓 Time controls</h4>
+              <table class="help-table">
+                <thead>
+                  <tr>
+                    <th>Control</th>
+                    <th>What it means</th>
+                    <th>Simple explanation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Days / step</td>
+                    <td>How far the clock advances per frame</td>
+                    <td>If set to 7, each tick moves the timeline forward one week.</td>
+                  </tr>
+                  <tr>
+                    <td>Step (ms)</td>
+                    <td>Playback speed in milliseconds</td>
+                    <td>Lower values speed up the animation (e.g., 600 ms is faster than 2000 ms).</td>
+                  </tr>
+                  <tr>
+                    <td>Window (days)</td>
+                    <td>Size of the rolling window</td>
+                    <td>Shows samples collected within the past X days relative to the slider.</td>
+                  </tr>
+                  <tr>
+                    <td>Lifespan (days)</td>
+                    <td>How long dots remain visible</td>
+                    <td>Samples fade out after this many days so you can follow fresh activity.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+            <section>
+              <h4>🔵 Marker & jitter controls</h4>
+              <table class="help-table">
+                <thead>
+                  <tr>
+                    <th>Control</th>
+                    <th>What it means</th>
+                    <th>Simple explanation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Marker size (px)</td>
+                    <td>Radius of each sample marker</td>
+                    <td>Bigger numbers make the dots easier to spot on the map.</td>
+                  </tr>
+                  <tr>
+                    <td>Jitter within (m)</td>
+                    <td>Random scatter distance around collection site (if longitude and latitude supplied)</td>
+                    <td>Prevents overlap by nudging points up to the specified meters away from collection site inside a district.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+            <section>
+              <h4>🧭 Map display options</h4>
+              <table class="help-table">
+                <thead>
+                  <tr>
+                    <th>Option</th>
+                    <th>What it means</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Show sample counts</td>
+                    <td>Adds numeric totals over each district for the visible window.</td>
+                  </tr>
+                  <tr>
+                    <td>Province labels</td>
+                    <td>Displays ADM1 names on the map.</td>
+                  </tr>
+                  <tr>
+                    <td>Country borders</td>
+                    <td>Emphasizes national boundaries.</td>
+                  </tr>
+                  <tr>
+                    <td>Country labels</td>
+                    <td>Adds country names for quick orientation.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+            <section>
+              <h4>🎨 Theme</h4>
+              <table class="help-table">
+                <thead>
+                  <tr>
+                    <th>Control</th>
+                    <th>What it means</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Theme</td>
+                    <td>Switch between light and dark styling for the entire workspace.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+          <div class="help-modal-footer">
+            <button type="button" id="helpModalDismiss">Close</button>
+            <button
+              type="button"
+              class="primary"
+              id="helpModalGuideBtn"
+              data-url="https://github.com/GenRe-Mekong/EpiGenTracker"
+            >
+              See Full Guide on GitHub
             </button>
           </div>
         </div>
@@ -1144,6 +1398,8 @@
       }
 
       const DAY_MS = 86400000;
+      const GROUPING_MAX_LEVELS = 72;
+      const GROUPING_COLUMN_LIMIT = 35;
 
       const appState = {
         theme: "light", // Start with light theme
@@ -1193,9 +1449,16 @@
           stepIntervalMs: 600,
           windowDays: 30,
           lifespanDays: 180,
+          datePrecision: "day",
         },
         legend: {
           selected: new Set(),
+        },
+        grouping: {
+          options: [],
+          captureColumns: new Set(),
+          activeColumn: null,
+          defaultColumn: null,
         },
         tree: {
           zoom: null,
@@ -1213,19 +1476,44 @@
       const legendState = appState.legend;
       const treeState = appState.tree;
       const compareState = appState.compare;
+      const groupingState = appState.grouping;
 
       const UNCLUSTERED_CLUSTER = { color: "#8a8f98", shape: "triangle" };
+      const SPECIAL_GROUP_RULES = [
+        { keywords: ["sensitive"], color: "#4daf4a", order: 1, priority: 1 },
+        { keywords: ["wt"], color: "#377eb8", order: 1, priority: 2 },
+        { keywords: ["resistant"], color: "#e41a1c", order: 2, priority: 3 },
+        { keywords: ["mutant"], color: "#E15759", order: 2, priority: 4 },
+        {
+          keywords: ["undertermined", "undetermined"],
+          color: "#EDC948",
+          order: 4,
+          priority: 5,
+        },
+      ];
+      const BOTTOM_GROUP_VALUES = ["<na>", "missing", "-"];
+      const BOTTOM_GROUP_COLOR = "#d3d3d3";
+      const SYMBOL_GROUP_COLOR = "#555555";
+      const INVALID_GROUP_VALUE_RE =
+        /^(NA|null|none|uncluster|unclustered|ungrouped)$/i;
 
       function getClusterGlyph(clusterName) {
         if (!clusterName || clusterName === "Unclustered") {
           return UNCLUSTERED_CLUSTER;
         }
-        const idx = Math.max(0, dataState.clusterOrder.indexOf(clusterName));
+        const idx = dataState.clusterOrder.indexOf(clusterName);
+        const safeIdx = idx >= 0 ? idx : 0;
         const scale = dataState.colorScale;
-        const color = scale
-          ? scale(clusterName)
-          : PALETTE24[idx % PALETTE24.length];
-        return { color, shape: clusterShapeByIndex(idx) };
+        let color = null;
+        if (typeof scale === "function") {
+          color = scale(clusterName);
+        } else if (scale && typeof scale.get === "function") {
+          color = scale.get(clusterName);
+        }
+        if (!color) {
+          color = PALETTE24[safeIdx % PALETTE24.length];
+        }
+        return { color, shape: clusterShapeByIndex(safeIdx) };
       }
 
       /* ==================== Elements ==================== */
@@ -1279,6 +1567,7 @@
       const legendShowAllBtn = document.getElementById("legendShowAll");
       const legendHideAllBtn = document.getElementById("legendHideAll");
       const legendToggleBtn = document.getElementById("legendToggleBtn");
+      const groupingSelect = document.getElementById("groupingSelect");
       const toast = document.getElementById("toast");
       const treeNote = document.getElementById("treeNote");
       const treeZoomIn = document.getElementById("treeZoomIn");
@@ -1359,6 +1648,61 @@
         toast.style.display = "block";
         clearTimeout(showToast._t);
         showToast._t = setTimeout(() => (toast.style.display = "none"), ms);
+      }
+
+      function openHelpModal() {
+        const modal = document.getElementById("helpModal");
+        if (!modal) return;
+        modal.classList.add("show");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeHelpModal() {
+        const modal = document.getElementById("helpModal");
+        if (!modal) return;
+        modal.classList.remove("show");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+      }
+
+      function setupHelpModalHandlers() {
+        const button = document.getElementById("help-replay-tutorial");
+        const modal = document.getElementById("helpModal");
+        const closeBtn = document.getElementById("helpModalClose");
+        const dismissBtn = document.getElementById("helpModalDismiss");
+        const guideBtn = document.getElementById("helpModalGuideBtn");
+        if (button) {
+          button.onclick = null;
+          button.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            openHelpModal();
+          });
+        }
+        [closeBtn, dismissBtn]
+          .filter(Boolean)
+          .forEach((btn) => btn.addEventListener("click", closeHelpModal));
+        if (modal) {
+          modal.addEventListener("click", (e) => {
+            if (e.target === modal) closeHelpModal();
+          });
+        }
+        if (guideBtn) {
+          guideBtn.addEventListener("click", () => {
+            const url = guideBtn.getAttribute("data-url");
+            if (url) window.open(url, "_blank");
+          });
+        }
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            const currentModal = document.getElementById("helpModal");
+            if (currentModal?.classList.contains("show")) {
+              closeHelpModal();
+            }
+          }
+        });
       }
 
       function areaListForLevel(level) {
@@ -1700,12 +2044,264 @@
         return null;
       }
 
+      function normalizeGroupingValue(raw) {
+        if (raw == null) return null;
+        const str = String(raw).trim();
+        if (!str) return null;
+        if (INVALID_GROUP_VALUE_RE.test(str)) return null;
+        return str;
+      }
+
+      function looksNumericToken(val) {
+        if (val == null) return false;
+        const str = String(val).trim();
+        if (!str) return false;
+        return /^[+-]?\d+(\.\d+)?$/.test(str);
+      }
+
+      function looksDateToken(val) {
+        if (val == null) return false;
+        const str = String(val).trim();
+        if (!str || !/\d/.test(str)) return false;
+        return parseDateFlexible(str) instanceof Date;
+      }
+
+      function columnQualifiesForGrouping(rows, columnName) {
+        const seen = new Set();
+        let observed = 0;
+        for (const row of rows) {
+          if (!row || !(columnName in row)) continue;
+          const val = row[columnName];
+          if (val == null || val === "") continue;
+          const str = String(val).trim();
+          if (!str) continue;
+          if (looksNumericToken(str) || looksDateToken(str)) {
+            return false;
+          }
+          observed++;
+          seen.add(str);
+          if (seen.size > GROUPING_MAX_LEVELS) {
+            return false;
+          }
+        }
+        return observed > 0 && seen.size > 0;
+      }
+
+      function deriveColumnOrder(rows) {
+        const seen = new Set();
+        const order = [];
+        for (const row of rows || []) {
+          Object.keys(row || {}).forEach((key) => {
+            if (!seen.has(key)) {
+              seen.add(key);
+              order.push(key);
+            }
+          });
+        }
+        return order;
+      }
+
+      function findFirstColumnMatch(columns, regex) {
+        return columns.find((col) => regex.test(col)) || null;
+      }
+
+      function getRowValueByPattern(row, preferredKey, regex) {
+        if (
+          row &&
+          preferredKey &&
+          Object.prototype.hasOwnProperty.call(row, preferredKey)
+        ) {
+          return row[preferredKey];
+        }
+        if (!row) return null;
+        const matchKey = Object.keys(row).find((key) => regex.test(key));
+        return matchKey ? row[matchKey] : null;
+      }
+
+      function buildDateFromMonthYear(monthVal, yearVal) {
+        if (monthVal == null || yearVal == null) return null;
+        const yearStr = String(yearVal).trim();
+        if (!yearStr) return null;
+        let yearNum = parseInt(yearStr, 10);
+        if (Number.isNaN(yearNum)) return null;
+        if (yearStr.length === 2) {
+          yearNum += yearNum >= 50 ? 1900 : 2000;
+        }
+        if (yearNum < 1900 || yearNum > 2100) return null;
+        const month = String(monthVal).trim();
+        if (!month) return null;
+        let monthIdx = null;
+        const asNumber = parseInt(month, 10);
+        if (!Number.isNaN(asNumber)) {
+          if (asNumber >= 1 && asNumber <= 12) {
+            monthIdx = asNumber - 1;
+          }
+        } else if (/[a-z]/i.test(month)) {
+          const parsed = Date.parse(`1 ${month} 2000`);
+          if (!Number.isNaN(parsed)) {
+            monthIdx = new Date(parsed).getMonth();
+          }
+        }
+        if (monthIdx == null) return null;
+        return new Date(Date.UTC(yearNum, monthIdx, 1));
+      }
+
+      function escapeRegexPattern(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      function matchesKeyword(value, keyword) {
+        if (!value || !keyword) return false;
+        const trimmed = String(value).trim();
+        if (!trimmed) return false;
+        const cleanKeyword = String(keyword).trim();
+        if (!cleanKeyword) return false;
+        if (/^[a-z0-9]+$/i.test(cleanKeyword)) {
+          const rx = new RegExp(`\\b${escapeRegexPattern(cleanKeyword)}\\b`, "i");
+          return rx.test(trimmed);
+        }
+        return trimmed.toLowerCase() === cleanKeyword.toLowerCase();
+      }
+
+      function classifyClusterName(name, opts = {}) {
+        const trimmed = (name || "").trim();
+        if (!trimmed) {
+          return { bucket: "other", order: 100 };
+        }
+        const lower = trimmed.toLowerCase();
+        if (BOTTOM_GROUP_VALUES.some((val) => lower === val.toLowerCase())) {
+          return {
+            bucket: "bottom",
+            order: Number.POSITIVE_INFINITY,
+            color: BOTTOM_GROUP_COLOR,
+          };
+        }
+        const symbolRegex = opts.allowHyphenSymbols
+          ? /[,\#\*]/
+          : /[,\#\*\-]/;
+        if (symbolRegex.test(trimmed)) {
+          return {
+            bucket: "symbols",
+            order: 150,
+            color: SYMBOL_GROUP_COLOR,
+          };
+        }
+        for (const rule of SPECIAL_GROUP_RULES) {
+          if (rule.keywords.some((kw) => matchesKeyword(trimmed, kw))) {
+            return {
+              bucket: "special",
+              order: rule.order,
+              color: rule.color,
+              priority: rule.priority ?? rule.order,
+            };
+          }
+        }
+        return { bucket: "other", order: 100 };
+      }
+
+      function buildClusterVisuals(clusterNames, opts = {}) {
+        const descriptors = clusterNames.map((name) => ({
+          name,
+          meta: classifyClusterName(name, opts),
+        }));
+        const specials = descriptors
+          .filter((d) => d.meta.bucket === "special")
+          .sort((a, b) => {
+            if (a.meta.order !== b.meta.order) {
+              return a.meta.order - b.meta.order;
+            }
+            if ((a.meta.priority ?? 0) !== (b.meta.priority ?? 0)) {
+              return (a.meta.priority ?? 0) - (b.meta.priority ?? 0);
+            }
+            return a.name.localeCompare(b.name, undefined, {
+              sensitivity: "base",
+            });
+          });
+        const others = descriptors
+          .filter((d) => d.meta.bucket === "other")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          );
+        const bottom = descriptors
+          .filter((d) => d.meta.bucket === "bottom")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          );
+        const symbolGroups = descriptors
+          .filter((d) => d.meta.bucket === "symbols")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          );
+        const ordered = [...specials, ...others, ...symbolGroups, ...bottom].map(
+          (d) => d.name
+        );
+        const colorMap = new Map();
+        const usedColors = new Set();
+        specials.forEach((entry) => {
+          colorMap.set(entry.name, entry.meta.color);
+          usedColors.add(entry.meta.color.toLowerCase());
+        });
+        symbolGroups.forEach((entry) => {
+          colorMap.set(entry.name, entry.meta.color);
+          usedColors.add(entry.meta.color.toLowerCase());
+        });
+        bottom.forEach((entry) => {
+          colorMap.set(entry.name, BOTTOM_GROUP_COLOR);
+          usedColors.add(BOTTOM_GROUP_COLOR.toLowerCase());
+        });
+        const paletteQueue = PALETTE24.filter(
+          (color) => !usedColors.has(color.toLowerCase())
+        );
+        let paletteIdx = 0;
+        others.forEach((entry) => {
+          let color = paletteQueue[paletteIdx];
+          if (!color) {
+            color = PALETTE24[paletteIdx % PALETTE24.length];
+          }
+          paletteIdx += 1;
+          colorMap.set(entry.name, color);
+          usedColors.add(color.toLowerCase());
+        });
+        return { ordered, colorMap };
+      }
+
+      function evaluateGroupingColumns(rows, columnOrder) {
+        const trimmedOrder = columnOrder.slice(0, GROUPING_COLUMN_LIMIT);
+        const priorityColumns = columnOrder.filter((col) =>
+          /^group$/i.test(col) || /^cluster$/i.test(col)
+        );
+        const defaultColumn = priorityColumns[0] || null;
+        const eligibleColumns = trimmedOrder.filter((col) =>
+          columnQualifiesForGrouping(rows, col)
+        );
+        const uniqueEligible = Array.from(
+          new Set([...priorityColumns, ...eligibleColumns].filter(Boolean))
+        );
+        const captureColumns = Array.from(
+          new Set([...priorityColumns, ...uniqueEligible].filter(Boolean))
+        );
+        const initialColumn = defaultColumn || uniqueEligible[0] || null;
+        return {
+          eligibleColumns: uniqueEligible,
+          captureColumns,
+          defaultColumn,
+          initialColumn,
+        };
+      }
+
       function fmtDateFromDayInt(dayInt) {
         const dt = new Date(dayInt * DAY_MS);
         const y = dt.getFullYear(),
           m = String(dt.getMonth() + 1).padStart(2, "0"),
           d = String(dt.getDate()).padStart(2, "0");
         return `${y}-${m}-${d}`;
+      }
+
+      function fmtMonthYearFromDayInt(dayInt) {
+        const dt = new Date(dayInt * DAY_MS);
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, "0");
+        return `${y}-${m}`;
       }
 
       /* Random point inside district with bias near base point */
@@ -2257,10 +2853,24 @@
         dataState.clusters.clear();
         dataState.clusterOrder = [];
         dataState.colorScale = null;
+        groupingState.options = [];
+        groupingState.captureColumns = new Set();
+        groupingState.activeColumn = null;
+        groupingState.defaultColumn = null;
+        resetGroupingSelectUI("Load data to enable");
+
+        const columnOrder = deriveColumnOrder(rows);
+        const monthColumn = findFirstColumnMatch(columnOrder, /month/i);
+        const yearColumn = findFirstColumnMatch(columnOrder, /year/i);
+        const groupingInfo = evaluateGroupingColumns(rows, columnOrder);
+        const columnsToCapture = groupingInfo.captureColumns || [];
+        groupingState.captureColumns = new Set(columnsToCapture);
 
         const missingGIDs = new Set();
         let ok = 0;
         let bad = 0;
+        let hadExactDate = false;
+        let hadMonthYearFallback = false;
 
         for (const row of rows) {
           const gid = normalizeKey(
@@ -2274,24 +2884,19 @@
               row.gid ||
               row.GID
           );
-          const date = parseDateFlexible(
+          let date = parseDateFlexible(
             row.CollectionDate || row.date || row.Date || row.collection_date
           );
-          // Accept either "Cluster" or "Group" column (case-insensitive)
-const clusterRaw =
-  row.Group ??
-  row.group ??
-  row.GROUP ??
-  row.Cluster ??
-  row.cluster ??
-  row.CLUSTER;
-
-const cluster =
-  !clusterRaw ||
-  /^(NA|null|none|uncluster|unclustered|ungrouped)$/i.test(String(clusterRaw))
-    ? null
-    : String(clusterRaw).trim();
-
+          if (date) {
+            hadExactDate = true;
+          } else {
+            const monthVal = getRowValueByPattern(row, monthColumn, /month/i);
+            const yearVal = getRowValueByPattern(row, yearColumn, /year/i);
+            date = buildDateFromMonthYear(monthVal, yearVal);
+            if (date) {
+              hadMonthYearFallback = true;
+            }
+          }
 
           const nameFromCsv = normalizeKey(
             row.AdmDiv2 || row.AdminDiv2 || row.admdiv2 || row.adminDiv2
@@ -2335,18 +2940,23 @@ const cluster =
           const ctryName = adm0
             ? geoState.adm0_to_name.get(adm0) || adm0
             : null;
+          const groupValues = Object.create(null);
+          columnsToCapture.forEach((col) => {
+            groupValues[col] = normalizeGroupingValue(row[col]);
+          });
 
           dataState.samples.push({
             gid, // ADM2 id
             gid1, // ADM1 id (may be null)
             adm0, // ADM0 id (may be null)
             dayInt,
-            cluster,
+            cluster: null,
             baseLatLng: cloneLatLngPair(baseLatLng),
             latlng: ll,
             districtName,
             provinceName: provName || "",
             countryName: ctryName || "",
+            groupValues,
           });
 
           // ensure registries/names are filled even if ADM2 GeoJSON came later
@@ -2359,22 +2969,25 @@ const cluster =
             dataState.idToName.set(adm0, ctryName || adm0);
           }
 
-          if (cluster) dataState.clusters.add(cluster);
           ok++;
         }
 
         if (ok === 0) {
+          timelineState.datePrecision = "day";
           showToast("No valid rows found. Check column names and GIDs.");
+          resetGroupingSelectUI("No eligible groups");
           return;
         }
+        timelineState.datePrecision = hadExactDate
+          ? "day"
+          : hadMonthYearFallback
+          ? "month"
+          : "day";
 
-        const clustArr = Array.from(dataState.clusters.values()).sort();
-        dataState.colorScale = d3
-          .scaleOrdinal()
-          .domain(clustArr)
-          .range(PALETTE24);
-        dataState.clusterOrder = clustArr.slice();
-
+        groupingState.options = groupingInfo.eligibleColumns;
+        groupingState.defaultColumn = groupingInfo.defaultColumn;
+        groupingState.activeColumn = groupingInfo.initialColumn;
+        buildGroupingSelectOptions();
         legendState.selected.clear();
 
         timelineState.minDay = d3.min(dataState.samples, (d) => d.dayInt);
@@ -2400,8 +3013,107 @@ const cluster =
         }
         showToast(msg, 4200);
 
+        applyGrouping(groupingInfo.initialColumn, { skipSelectSync: true });
+      }
+
+      function resetGroupingSelectUI(message) {
+        if (!groupingSelect) return;
+        groupingSelect.innerHTML = "";
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = message || "Load data to enable";
+        opt.disabled = true;
+        opt.selected = true;
+        groupingSelect.appendChild(opt);
+        groupingSelect.disabled = true;
+      }
+
+      function buildGroupingSelectOptions() {
+        if (!groupingSelect) return;
+        groupingSelect.innerHTML = "";
+        const options = groupingState.options || [];
+        if (!options.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = groupingState.defaultColumn
+            ? `Using ${groupingState.defaultColumn}`
+            : "No eligible columns";
+          opt.disabled = true;
+          opt.selected = true;
+          groupingSelect.appendChild(opt);
+          groupingSelect.disabled = true;
+          return;
+        }
+        groupingSelect.disabled = false;
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select column";
+        placeholder.disabled = true;
+        placeholder.selected = !groupingState.activeColumn;
+        groupingSelect.appendChild(placeholder);
+        options.forEach((col) => {
+          const opt = document.createElement("option");
+          opt.value = col;
+          opt.textContent =
+            col === groupingState.defaultColumn ? `${col} (default)` : col;
+          if (col === groupingState.activeColumn) opt.selected = true;
+          groupingSelect.appendChild(opt);
+        });
+        groupingSelect.disabled = false;
+        syncGroupingSelect();
+      }
+
+      function syncGroupingSelect() {
+        if (!groupingSelect || groupingSelect.disabled) return;
+        if (groupingState.activeColumn) {
+          groupingSelect.value = groupingState.activeColumn;
+        } else {
+          groupingSelect.value = "";
+        }
+      }
+
+      function applyGrouping(columnName, opts = {}) {
+        if (columnName && !groupingState.captureColumns.has(columnName)) {
+          columnName = null;
+        }
+        groupingState.activeColumn = columnName || null;
+        dataState.clusters.clear();
+        dataState.clusterOrder = [];
+        dataState.colorScale = null;
+        legendState.selected.clear();
+        dataState.samples.forEach((s) => {
+          const raw =
+            columnName && s.groupValues
+              ? s.groupValues[columnName]
+              : null;
+          s.cluster = raw || null;
+          if (raw) {
+            dataState.clusters.add(raw);
+          }
+        });
+        const clustArr = Array.from(dataState.clusters.values());
+        if (clustArr.length) {
+          const allowHyphenSymbols =
+            columnName &&
+            /^(group|cluster)$/i.test(columnName);
+          const visuals = buildClusterVisuals(clustArr, {
+            allowHyphenSymbols,
+          });
+          dataState.colorScale = (name) =>
+            name && visuals.colorMap.get(name)
+              ? visuals.colorMap.get(name)
+              : null;
+          dataState.clusterOrder = visuals.ordered.slice();
+        } else {
+          dataState.colorScale = null;
+          dataState.clusterOrder = [];
+        }
+        if (!opts.skipSelectSync) {
+          syncGroupingSelect();
+        }
         buildLegend();
         updateScene();
+        updateCharts();
         updateTree();
       }
 
@@ -2588,15 +3300,31 @@ const cluster =
         legendBox.style.display = isHidden ? "block" : "none";
         legendToggleBtn.textContent = isHidden ? "Hide" : "Show";
       });
+      if (groupingSelect) {
+        groupingSelect.addEventListener("change", () => {
+          const selected = groupingSelect.value || null;
+          applyGrouping(selected);
+        });
+      }
 
       function buildLegend() {
         if (!legendBox) return;
         legendBox.innerHTML = "";
         legendBox.style.display = "block";
         if (legendToggleBtn) legendToggleBtn.textContent = "Hide";
-        const clustersList = Array.from(
+        const uniqueSamples = Array.from(
           new Set(dataState.samples.map((s) => s.cluster || "Unclustered"))
-        ).sort();
+        );
+        const orderedFromState = dataState.clusterOrder || [];
+        const clustersList =
+          orderedFromState.length > 0
+            ? [
+                ...orderedFromState,
+                ...uniqueSamples.filter(
+                  (c) => !orderedFromState.includes(c)
+                ),
+              ]
+            : uniqueSamples.sort();
         clustersList.forEach((c) => {
           const row = document.createElement("div");
           row.className = "legend-row";
@@ -2678,7 +3406,10 @@ const cluster =
           timelineState.lifespanDays
         );
         const startDay = timelineState.currentDay - (lookbackDays - 1);
-        const dateStr = fmtDateFromDayInt(timelineState.currentDay);
+        const dateStr =
+          timelineState.datePrecision === "month"
+            ? fmtMonthYearFromDayInt(timelineState.currentDay)
+            : fmtDateFromDayInt(timelineState.currentDay);
         currentDateLabel.textContent = dateStr;
         dateTitle.textContent = dateStr;
 
@@ -3499,6 +4230,7 @@ const cluster =
       setLeftPanelVisible(true);
       setRightPanelVisible(true);
       applyTheme("light");
+      window.addEventListener("load", setupHelpModalHandlers);
     </script>
     <!-- Onboarding containers -->
 <div class="tour-backdrop" id="tour-backdrop"></div>
@@ -3749,12 +4481,6 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
   function startTour(){
   // Always start step 0 and show the overlay
   show(backdrop);
-  if (typeof helpBtn !== 'undefined' && helpBtn) {
-  helpBtn.addEventListener('click', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    startTour(); // no gating; always restarts
-  });
-}
   renderStep(0);
 }
 
@@ -3776,11 +4502,9 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
     const t = getFirstVisible(steps[idx].selector); if (t){ positionTooltip(t, steps[idx].placement||'bottom'); spotlight(t); }
   }}, {passive:true});
 
-  // Hook up Help button
-  if (helpBtn) helpBtn.addEventListener('click', ()=>{ renderStep(0); });
-
   // Auto-start for first-time users after page is fully ready
   window.addEventListener('load', ()=>{ startTour(true); });
+  window.startEpiTour = () => startTour();
 })();
 </script>
   </body>
