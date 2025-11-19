@@ -14,7 +14,7 @@
 -- [✨ What it is](#-what-it-is) 
 -- [⚡ Quick Start](#-quick-start) 
 -- [📁 Input File Formats](#-input-file-formats) 
--- [🧭 Using the Interface](#-using-the-interface) 
+-- [🧭 Full User guide](#-full-user-guide) 
 -- [📚 Citation & Author](#-citation--author) --
 
 
@@ -44,17 +44,19 @@ Load your **sample CSV**, play through time, compare **two regions**, and (optio
 ### 🗺️ GeoJSON (maps)
 - ADM2 required (districts); ADM1/ADM0 optional (borders/labels).  
 - Auto-detects IDs like `GID_2`, `ADM2_PCODE`, or `NAME_2`.
+You can download geojson files for any countries from https://gadm.org/download_country.html 
 
 ### 🧬 CSV (samples)
 CSV, UTF-8, comma-separated, one header row, one sample per row.
 
 **Required columns:**
-- `GID_2` — ADM2 or PCODE matching your GeoJSON  
-- `CollectionDate` — in `YYYY-MM-DD` or other parseable date formats
-
+- `GID_2` — Administrative division 2 ID matching your GeoJSON, which can be found at https://gadm.org/download_country.html
+- `CollectionDate` in `YYYY-MM-DD` or just `Month` and `Year` columns
+- 
 **Optional columns:**
 - `Group` or `Cluster` — sample group/cluster name will be used for colour and labelling
 - `Latitude`, `Longitude` — for jittered placement of samples within polygons (to be able to see overlapping samples in the same area)
+- Any columns can be added. This will allow you to colour the markers with these column. For example, you may wish to have 'species' or 'drug resistance' column
 
 **Minimal Example:**
 ```csv
@@ -64,27 +66,15 @@ KHM.1.1_1,2023-02-02,ClusterB
 VNM.2.3_1,2023-02-10,Unclustered
 ```
 
-## 🧭 Using the Interface
-### Map & Timeline
-- Controls: Play ▸ | Pause ⏸ | Reset ↻
-- Adjust: Days/step · Step interval (ms) · Window (days) · Lifespan (days)
-- Toggles: Sample counts · Province/country labels · Theme (Light/Dark)
+## 🧭 Full User guide
+Coming soon!
 
-### Charts Panel
-- Select Area A and Area B for comparison
-- Choose ADM level (ADM2/ADM1/ADM0)
-- Aggregate by Month or by Quarter
-- Toggle “Align axes” for synchronized scaling or show everything when unticked
-- Click legend entries to hide/show specific group
-- Cluster/Group/Label are auto-coloured
-
-### Genetic Tree Panel
-- Upload .tab file to render Neighbor-Joining tree
-- Use + / − to zoom
 
 ## 📚 Citation & Author
+✨ Developed by **Varanya Wasakul** with support from AI-assisted development tools
+
 If you use EpiGenTracker in your work, please cite:
 > GenRe-Mekong. EpiGenTracker: An interactive browser app for genetic epidemiology data visualization. 2025. https://github.com/GenRe-Mekong/EpiGenTracker
 
-✨ Developed by **Varanya Wasakul** with support from AI-assisted development tools
+
 
