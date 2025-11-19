@@ -281,6 +281,11 @@
         max-height: calc(90vh - 100px);
         overflow: auto;
       }
+      #rightPanelMain {
+        display: block;
+        width: 100%;
+        position: relative;
+      }
 
       #rightPanel h2 {
         font-size: 13px;
@@ -308,6 +313,16 @@
         border-color: rgba(34, 197, 94, 0.5);
         color: #34d399;
         font-weight: 600;
+      }
+      #legendSection {
+        margin-top: 10px;
+        padding: 12px 12px 14px;
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.02);
+        position: relative;
+      }
+      html.light #legendSection {
+        background: rgba(15, 23, 42, 0.04);
       }
       .legend-row {
         display: flex;
@@ -969,6 +984,14 @@
 
         <!-- Right panel: two charts + legend UNDER charts + align axis -->
         <aside id="rightPanel" aria-label="District charts">
+          <div
+            id="rightPanelMain"
+            data-tour-pad-top="12"
+            data-tour-pad-right="12"
+            data-tour-pad-bottom="4"
+            data-tour-pad-left="12"
+            data-tour-clip="#rightPanel"
+          >
           <div class="panel-header">
             <h2>Temporal Trends (stacked by group)</h2>
             <button
@@ -1048,30 +1071,43 @@
           <div style="margin-top: 6px" class="chip">
             x: month (or quarter) | y: samples (cumulative to current date)
           </div>
+          </div>
 
           <!-- Legend under charts (click to multi-select) -->
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              margin-top: 10px;
-            "
-          >
-            <strong style="font-size: 12px; opacity: 0.85">Legend</strong>
-            <div class="legend-actions">
-              <button id="legendShowAll">Show all</button>
-              <button id="legendHideAll">Hide all</button>
-              <button id="legendToggleBtn">Hide</button>
+          <div id="legendSection">
+            <div
+              id="legendHeader"
+              data-tour-pad-top="10"
+              data-tour-pad-right="14"
+              data-tour-pad-bottom="12"
+              data-tour-pad-left="14"
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  margin-top: 10px;
+                "
+              >
+                <strong id="legendTitle" style="font-size: 12px; opacity: 0.85"
+                  >Legend</strong
+                >
+                <div class="legend-actions">
+                  <button id="legendShowAll">Show all</button>
+                  <button id="legendHideAll">Hide all</button>
+                  <button id="legendToggleBtn">Hide</button>
+                </div>
+              </div>
+              <div class="legend-grouping">
+                <label for="groupingSelect">Marker grouping</label>
+                <select id="groupingSelect" disabled>
+                  <option value="">Load data to enable</option>
+                </select>
+              </div>
             </div>
+            <div id="legendBox" style="margin-top: 6px; line-height: 1.4; min-height: 48px"></div>
           </div>
-          <div class="legend-grouping">
-            <label for="groupingSelect">Marker grouping</label>
-            <select id="groupingSelect" disabled>
-              <option value="">Load data to enable</option>
-            </select>
-          </div>
-          <div id="legendBox" style="margin-top: 6px; line-height: 1.4"></div>
         </aside>
 
         <div id="toast"></div>
@@ -1141,7 +1177,7 @@
                     <td>If set to 7, each tick moves the timeline forward one week.</td>
                   </tr>
                   <tr>
-                    <td>Step (ms)</td>
+                    <td>Animation Speed</td>
                     <td>Playback speed in milliseconds</td>
                     <td>Lower values speed up the animation (e.g., 600 ms is faster than 2000 ms).</td>
                   </tr>
@@ -1235,9 +1271,9 @@
               type="button"
               class="primary"
               id="helpModalGuideBtn"
-              data-url="https://github.com/GenRe-Mekong/EpiGenTracker"
+              data-url="https://genremekong.org/tools/epigentracker"
             >
-              See Full Guide on GitHub
+              See Full Guide
             </button>
           </div>
         </div>
@@ -1435,7 +1471,7 @@
           countsLayer: null,
           provinceLabelsLayer: null,
           countryLabelsLayer: null,
-          showCounts: true,
+          showCounts: false,
           markerRadius: 8,
           jitterMeters: 5000,
         },
@@ -1535,6 +1571,7 @@
       const pauseBtn = document.getElementById("pauseBtn");
       const resetBtn = document.getElementById("resetBtn");
       const toggleCounts = document.getElementById("toggleCounts");
+      toggleCounts.checked = mapState.showCounts;
       const speedDaysInput = document.getElementById("speedDays");
       const stepIntervalInput = document.getElementById("stepInterval");
       const windowDaysInput = document.getElementById("windowDays");
@@ -1788,7 +1825,10 @@
         L.control.zoom({ position: "bottomright" }).addTo(mapState.instance);
         mapState.instance.setView([15, 100], 5);
         mapState.markersLayer = L.layerGroup().addTo(mapState.instance);
-        mapState.countsLayer = L.layerGroup().addTo(mapState.instance);
+        mapState.countsLayer = L.layerGroup();
+        if (mapState.showCounts) {
+          mapState.countsLayer.addTo(mapState.instance);
+        }
         mapState.provinceLabelsLayer = L.layerGroup();
         mapState.countryLabelsLayer = L.layerGroup();
       }
@@ -2176,9 +2216,10 @@
             color: BOTTOM_GROUP_COLOR,
           };
         }
-        const symbolRegex = opts.allowHyphenSymbols
-          ? /[,\#\*]/
-          : /[,\#\*\-]/;
+        const treatHyphenAsSymbol =
+          !opts.allowHyphenSymbols &&
+          !(trimmed.length > 10 && trimmed.includes("-"));
+        const symbolRegex = treatHyphenAsSymbol ? /[,\#\*\-]/ : /[,\#\*]/;
         if (symbolRegex.test(trimmed)) {
           return {
             bucket: "symbols",
@@ -4268,7 +4309,7 @@
         <p>Upload your <b>GeoJSON maps</b> and <b>sample data</b> to begin. </p>
         <p> </p>
         <p>Essential: </p>
-        <p> • ADM2.geojson (can be downloaded from https://gadm.org/download_country.html)</p>
+        <p> • ADM2.geojson </p>
         <p> • Sample.csv </p> 
 
       `,
@@ -4287,12 +4328,23 @@
     },
     {
       id: 'trends',
-      selector: '#rightPanel',
+      selector: '#rightPanelMain',
       title: 'Sample trends by group 📊',
       html: `
         <p>Select an area in the box aggregate by administration level. </p> 
         <p> Compare <b>temporal trends</b> between areas, stacked counts by group.</p>
 
+      `,
+      primary: 'Next',
+      placement: 'left'
+    },
+    {
+      id: 'legend',
+      selector: '#legendHeader',
+      title: 'Marker and chart colour 🔴',
+      html: `
+        <p>Each <b>sample</b> is one dot on the map.</p>
+        <p>Dots and charts are colored using the <b>label</b> you pick here.</p>
       `,
       primary: 'Next',
       placement: 'left'
@@ -4335,6 +4387,7 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
 
   let idx = 0;
   let activeTargets = [];
+  const scrollSyncSources = new Set();
 
   function show(el){ el.style.display = 'block'; }
   function hide(el){ el.style.display = 'none'; }
@@ -4391,12 +4444,54 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
   }
 
   function spotlight(target){
-    const r = target.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    let top = rect.top;
+    let bottom = rect.bottom;
+    let left = rect.left;
+    let right = rect.right;
+
+    const clipSelector = target.dataset.tourClip;
+    if (clipSelector){
+      const clipEl = document.querySelector(clipSelector);
+      if (clipEl){
+        const clipRect = clipEl.getBoundingClientRect();
+        top = Math.max(top, clipRect.top);
+        bottom = Math.min(bottom, clipRect.bottom);
+        left = Math.max(left, clipRect.left);
+        right = Math.min(right, clipRect.right);
+        if (bottom < top) bottom = top;
+        if (right < left) right = left;
+      }
+    }
+
+    const padTop = Number(target.dataset.tourPadTop || 0);
+    const padRight = Number(target.dataset.tourPadRight || 0);
+    const padBottom = Number(target.dataset.tourPadBottom || 0);
+    const padLeft = Number(target.dataset.tourPadLeft || 0);
+
     spot.style.display = 'block';
-    spot.style.top = `${window.scrollY + r.top - 8}px`;
-    spot.style.left = `${window.scrollX + r.left - 8}px`;
-    spot.style.width = `${r.width + 16}px`;
-    spot.style.height = `${r.height + 16}px`;
+    spot.style.top = `${window.scrollY + top - 8 - padTop}px`;
+    spot.style.left = `${window.scrollX + left - 8 - padLeft}px`;
+    const width = Math.max(0, right - left);
+    const height = Math.max(0, bottom - top);
+    spot.style.width = `${width + 16 + padLeft + padRight}px`;
+    spot.style.height = `${height + 16 + padTop + padBottom}px`;
+  }
+
+  function syncOnScroll(el){
+    if (!el || scrollSyncSources.has(el)) return;
+    scrollSyncSources.add(el);
+    el.addEventListener('scroll', ()=>{
+      if (tip.style.display === 'none') return;
+      const currentStep = steps[idx];
+      if (!currentStep?.selector) return;
+      const target = getFirstVisible(currentStep.selector);
+      if (target){
+        tip.style.display = 'block';
+        spotlight(target);
+        positionTooltip(target, currentStep.placement || 'bottom');
+      }
+    }, {passive:true});
   }
 
   function renderStep(i){
@@ -4459,11 +4554,23 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
         target.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
         target.classList.add('tour-target-focus');
         activeTargets = [target];
-        spotlight(target);
-        show(spot);
-        // Position tooltip around target
-        tip.style.display = 'block'; // ensure size measured
-        positionTooltip(target, s.placement || 'bottom');
+        syncOnScroll(target);
+        if (target.dataset.tourClip){
+          const clipEl = document.querySelector(target.dataset.tourClip);
+          syncOnScroll(clipEl);
+        }
+        const placeTooltip = () => {
+          tip.style.display = 'block';
+          spotlight(target);
+          show(spot);
+          positionTooltip(target, s.placement || 'bottom');
+        };
+        placeTooltip();
+        setTimeout(() => {
+          if (idx === i && activeTargets.includes(target)){
+            placeTooltip();
+          }
+        }, 350);
       } else {
         // No visible target found — center the tooltip
         hide(spot);
