@@ -873,7 +873,7 @@
             ><input id="speedDays" type="number" min="1" value="7" />
           </div>
           <div class="ctrl">
-            <label>Step (ms)</label
+            <label>Animation speed</label
             ><input
               id="stepInterval"
               type="number"
@@ -900,7 +900,7 @@
           </div>
           <div class="ctrl">
             <label>Show sample counts</label
-            ><input id="toggleCounts" type="checkbox" checked />
+            ><input id="toggleCounts" type="checkbox" />
           </div>
           <div class="ctrl">
             <label>Province labels</label
@@ -4268,7 +4268,7 @@
         <p>Upload your <b>GeoJSON maps</b> and <b>sample data</b> to begin. </p>
         <p> </p>
         <p>Essential: </p>
-        <p> • ADM2.geojson </p>
+        <p> • ADM2.geojson (can be downloaded from https://gadm.org/download_country.html)</p>
         <p> • Sample.csv </p> 
 
       `,
@@ -4291,7 +4291,7 @@
       title: 'Sample trends by group 📊',
       html: `
         <p>Select an area in the box aggregate by administration level. </p> 
-        <p> Compare <b>Temporal trends</b> between areas, stacked counts by group.</p>
+        <p> Compare <b>temporal trends</b> between areas, stacked counts by group.</p>
 
       `,
       primary: 'Next',
@@ -4509,4 +4509,3 @@ if (helpBtn && localStorage.getItem(lsKey) !== '1') {
 </script>
   </body>
 </html>
-
