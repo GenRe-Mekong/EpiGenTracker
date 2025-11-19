@@ -52,7 +52,7 @@ CSV, UTF-8, comma-separated, one header row, one sample per row.
 **Required columns:**
 - `GID_2` — Administrative division 2 ID matching your GeoJSON, which can be found at https://gadm.org/download_country.html
 - `CollectionDate` in `YYYY-MM-DD` or just `Month` and `Year` columns
-- 
+  
 **Optional columns:**
 - `Group` or `Cluster` — sample group/cluster name will be used for colour and labelling
 - `Latitude`, `Longitude` — for jittered placement of samples within polygons (to be able to see overlapping samples in the same area)
