@@ -230,6 +230,17 @@
       .ctrl input[type="number"] {
         width: 90px;
       }
+      .ctrl.ctrl-stack {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .ctrl.ctrl-stack label {
+        min-width: 0;
+      }
+      .ctrl.ctrl-stack select,
+      .ctrl.ctrl-stack button {
+        width: 100%;
+      }
       .btn {
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid var(--border);
@@ -426,10 +437,36 @@
         outline-offset: 2px;
       }
       #showLeftPanelBtn {
-        left: 16px;
+        left: calc(16px + 96px + 24px);
       }
       #showRightPanelBtn {
         right: 50px;
+      }
+      .corner-credit {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        width: 100px;
+        padding: 0;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 740;
+        pointer-events: none;
+      }
+      .corner-credit img {
+        width: 100px;
+        height: auto;
+        display: block;
+        opacity: 0.85;
+      }
+      html.light .corner-credit img {
+        filter: invert(1);
+        opacity: 0.8;
       }
       #leftPanel,
       #rightPanel {
@@ -483,20 +520,44 @@
       }
 
       /* Bottom left player controls */
-#bottomPlayerControls {
-  position: absolute;
-  bottom: 15px;
-  left: 8px;
-  z-index: 650;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  box-shadow: var(--shadow-elevated);
-}
+      #bottomPlayerControls {
+        position: absolute;
+        top: calc(100% - var(--tl-h) - 17px);
+        left: 8px;
+        z-index: 650;
+        display: flex;
+        flex-direction: column;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 6px 8px 6px;
+        box-shadow: var(--shadow-elevated);
+      }
+      .player-button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .dev-credit {
+        position: absolute;
+        top: calc(100% - var(--tl-h) + 28px);
+        left: 14px;
+        margin: 0;
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text);
+        background: transparent;
+        z-index: 640;
+      }
+      .dev-credit a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .dev-credit a:hover {
+        opacity: 0.8;
+      }
 
 /* Smaller timeline buttons */
 .timeline-btn {
@@ -509,6 +570,25 @@
   padding: 2px 6px;
   margin-left: 4px;
 }
+
+      @media (max-width: 640px) {
+        #showLeftPanelBtn {
+          left: calc(16px + 96px + 12px);
+          top: 72px;
+        }
+        .corner-credit {
+          width: 80px;
+        }
+        #bottomPlayerControls {
+          left: 8px;
+          right: 8px;
+        }
+        .dev-credit {
+          left: 12px;
+          right: 12px;
+          top: calc(100% - var(--tl-h) + 32px);
+        }
+      }
 
 
       /* Genetic tree panel */
@@ -806,9 +886,15 @@
   </head>
   <body>
     <div id="layout">
-      <div id="mapWrap">
+        <div id="mapWrap">
         <div id="map"></div>
         <div id="dateTitle">--</div>
+        <div class="corner-credit" aria-label="GenRe-Mekong">
+          <img
+            src="assets/images/GenReMekongLogo-HD-white.png"
+            alt="GenRe-Mekong logo"
+          />
+        </div>
         <button
           id="showLeftPanelBtn"
           class="panel-toggle-button btn"
@@ -873,8 +959,28 @@
             Eastern GMS map successfully loaded.
           </div>
           <div class="ctrl">
-            <label>Sample Data (.csv)</label
-            ><input id="csvFile" type="file" accept=".csv" />
+            <label>Sample Data (.csv or .xlsx)</label
+            ><input
+              id="csvFile"
+              type="file"
+              accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            />
+          </div>
+          <div
+            class="ctrl ctrl-stack"
+            id="sheetSelectGroup"
+            style="display: none"
+          >
+            <label for="sheetSelect">Excel sheet with sample data</label>
+            <select id="sheetSelect"></select>
+            <button class="btn" type="button" id="sheetConfirmBtn" disabled>
+              Confirm sheet
+            </button>
+            <div
+              class="chip"
+              id="sheetAutoSelectMsg"
+              style="display: none; align-self: flex-start"
+            ></div>
           </div>
           </section>
 
@@ -1281,16 +1387,28 @@
 
       <!-- Player buttons at bottom left -->
         <div id="bottomPlayerControls">
-          <button class="btn timeline-btn" id="playBtn">
-            <span aria-hidden="true">&#9654;</span> Play
-          </button>
-          <button class="btn timeline-btn" id="pauseBtn">
-            <span aria-hidden="true">&#10073;&#10073;</span> Pause
-          </button>
-          <button class="btn timeline-btn" id="resetBtn">
-            <span aria-hidden="true">&#10226;</span> Reset
-          </button>
+          <div
+            class="player-button-row"
+            role="group"
+            aria-label="Timeline playback controls"
+          >
+            <button class="btn timeline-btn" id="playBtn">
+              <span aria-hidden="true">&#9654;</span> Play
+            </button>
+            <button class="btn timeline-btn" id="pauseBtn">
+              <span aria-hidden="true">&#10073;&#10073;</span> Pause
+            </button>
+            <button class="btn timeline-btn" id="resetBtn">
+              <span aria-hidden="true">&#10226;</span> Reset
+            </button>
+          </div>
         </div>
+        <p class="dev-credit">
+          Built by
+            Varanya Wasakul
+          <br />
+          under the GenRe-Mekong project.
+        </p>
 
       <!-- Timeline -->
       <footer id="timelineBar">
@@ -1312,6 +1430,7 @@
     <!-- Libs -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
     <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
 
@@ -1398,6 +1517,27 @@
         });
       }
 
+      const markerIconCache = new Map();
+      function markerIconKey({ shape, color, size, fillOpacity, strokeOpacity }) {
+        return [
+          shape || "",
+          color || "",
+          size || 0,
+          Number(fillOpacity ?? 0).toFixed(2),
+          Number(strokeOpacity ?? 0).toFixed(2),
+        ].join("|");
+      }
+      function getCachedMarkerIcon(options) {
+        const key = markerIconKey(options);
+        if (!markerIconCache.has(key)) {
+          markerIconCache.set(key, svgMarkerIcon(options));
+        }
+        return markerIconCache.get(key);
+      }
+      function clearMarkerIconCache() {
+        markerIconCache.clear();
+      }
+
       // Small SVG used in the legend swatch (global so buildLegend can call it)
       function svgLegendSwatch(shape, color) {
         const r = 7; // size of legend marker
@@ -1437,6 +1577,14 @@
       const GROUPING_MAX_LEVELS = 72;
       const GROUPING_COLUMN_LIMIT = 35;
 
+      function createEmptyChartCache() {
+        return {
+          adm2: { month: new Map(), quarter: new Map() },
+          adm1: { month: new Map(), quarter: new Map() },
+          adm0: { month: new Map(), quarter: new Map() },
+        };
+      }
+
       const appState = {
         theme: "light", // Start with light theme
         data: {
@@ -1448,6 +1596,8 @@
           adm1Ids: new Set(), // province ids (GID_1)
           adm0Ids: new Set(), // country ids (NAME_0 or GID_0-like)
           idToName: new Map(), // key -> display name (for any level)
+          samplesByDay: new Map(),
+          chartCache: createEmptyChartCache(),
         },
         geo: {
           gidToCentroid: new Map(),
@@ -1460,6 +1610,7 @@
           gid1_to_adm0: new Map(), // province -> country id
           gid1_to_name: new Map(), // province id -> name
           adm0_to_name: new Map(), // country id -> name
+          provinceLabelMarkers: new Map(),
         },
         charts: {
           aggLevel: "adm2", // adm2 | adm1 | adm0
@@ -1532,6 +1683,7 @@
       const SYMBOL_GROUP_COLOR = "#555555";
       const INVALID_GROUP_VALUE_RE =
         /^(NA|null|none|uncluster|unclustered|ungrouped)$/i;
+      const PREFERRED_SHEET_NAMES = ["data", "grc"];
 
       function getClusterGlyph(clusterName) {
         if (!clusterName || clusterName === "Unclustered") {
@@ -1567,6 +1719,10 @@
       const easternGmsNotice = document.getElementById("easternGmsNotice");
       const csvInput = document.getElementById("csvFile");
       const tabInput = document.getElementById("tabFile");
+      const sheetSelectGroup = document.getElementById("sheetSelectGroup");
+      const sheetSelect = document.getElementById("sheetSelect");
+      const sheetConfirmBtn = document.getElementById("sheetConfirmBtn");
+      const sheetAutoSelectMsg = document.getElementById("sheetAutoSelectMsg");
       const playBtn = document.getElementById("playBtn");
       const pauseBtn = document.getElementById("pauseBtn");
       const resetBtn = document.getElementById("resetBtn");
@@ -1633,6 +1789,9 @@
       const easternBtnDefaultLabel =
         (loadEasternMapBtn && loadEasternMapBtn.textContent.trim()) ||
         "Load eastern GMS map (KH, LA, TH, VN)";
+      let pendingWorkbook = null;
+      let pendingWorkbookFile = "";
+      let excelLoaderToken = 0;
 
       /* ==================== UI Helpers ==================== */
       function reflectMapSourceState() {
@@ -1757,13 +1916,10 @@
         });
 
         // Convert to array with display names, filtering to only include areas with samples
-        const areas = Array.from(areasWithSamples).map((id) => {
-          const displayName =
-            dataState.idToName.get(id) ||
-            (level === "adm2" ? geoState.gidToName.get(id) : null) ||
-            id;
-          return [id, displayName];
-        });
+        const areas = Array.from(areasWithSamples).map((id) => [
+          id,
+          displayNameForId(id),
+        ]);
 
         return areas;
       }
@@ -2652,6 +2808,37 @@
         }
       }
 
+      function createProvinceLabelIcon(text) {
+        return L.divIcon({
+          className: "province-label",
+          html: `<span class="badge">${text}</span>`,
+          iconSize: null,
+          iconAnchor: [0, 0],
+        });
+      }
+
+      function setProvinceDisplayLabel(provId, label) {
+        if (!provId) return;
+        const finalLabel = label && String(label).trim().length
+          ? String(label).trim()
+          : provId;
+        dataState.adm1Ids.add(provId);
+        dataState.idToName.set(provId, finalLabel);
+        geoState.gid1_to_name.set(provId, finalLabel);
+        if (
+          geoState.provinceLabelMarkers &&
+          geoState.provinceLabelMarkers.has(provId)
+        ) {
+          const entry = geoState.provinceLabelMarkers.get(provId);
+          if (entry && entry.marker) {
+            entry.marker.setIcon(createProvinceLabelIcon(finalLabel));
+            if (!entry.fallback) {
+              entry.fallback = finalLabel;
+            }
+          }
+        }
+      }
+
       function loadProvinceGeoJSON(gj, { silent = false } = {}) {
         if (!gj || !Array.isArray(gj.features)) {
           if (!silent) showToast("Provinces GeoJSON is missing a features array.");
@@ -2662,6 +2849,7 @@
           mapState.instance.removeLayer(geoState.provincesLayer);
         }
         mapState.provinceLabelsLayer.clearLayers();
+        geoState.provinceLabelMarkers = new Map();
 
         const cs = getComputedStyle(document.documentElement);
         geoState.provincesLayer = L.geoJSON(gj, {
@@ -2674,24 +2862,37 @@
 
         const proto =
           (gj.features && gj.features[0] && gj.features[0].properties) || {};
-        const nmKey =
-          ["NAME_1", "ADM1_EN", "NAME"].find((k) => proto && k in proto) ||
-          Object.keys(proto || {}).find((k) => /NAME/i.test(k));
+        const idKey = findProvIdKey(proto);
+        const fallbackNameKey = findProvNameKey(proto);
         gj.features.forEach((f) => {
           const centerLatLng = labelCoordinateForFeature(f);
           if (!centerLatLng) return;
-          const label =
-            nmKey && f.properties[nmKey] ? String(f.properties[nmKey]) : "";
+          const provId = idKey ? normalizeKey(f.properties[idKey]) : "";
+          let fallbackLabel = "";
+          if (
+            fallbackNameKey &&
+            Object.prototype.hasOwnProperty.call(f.properties || {}, fallbackNameKey)
+          ) {
+            fallbackLabel = String(f.properties[fallbackNameKey] || "").trim();
+          }
+          if (!fallbackLabel) {
+            fallbackLabel = provId || "";
+          }
+          let label = provId ? displayNameForId(provId) : "";
+          if (!label) {
+            label = fallbackLabel;
+          }
           const lbl = L.marker(centerLatLng, {
-            icon: L.divIcon({
-              className: "province-label",
-              html: `<span class="badge">${label}</span>`,
-              iconSize: null,
-              iconAnchor: [0, 0],
-            }),
+            icon: createProvinceLabelIcon(label),
             interactive: false,
           });
           mapState.provinceLabelsLayer.addLayer(lbl);
+          if (provId) {
+            geoState.provinceLabelMarkers.set(provId, {
+              marker: lbl,
+              fallback: fallbackLabel,
+            });
+          }
         });
 
         if (toggleProvLabels && toggleProvLabels.checked) {
@@ -2704,6 +2905,16 @@
         if (!silent) {
           showToast(`Loaded ${gj.features?.length || 0} provinces.`);
         }
+      }
+
+      function refreshProvinceLabelTexts() {
+        if (!geoState.provinceLabelMarkers) return;
+        geoState.provinceLabelMarkers.forEach((entry, provId) => {
+          if (!entry || !entry.marker) return;
+          const desired =
+            displayNameForId(provId) || entry.fallback || provId || "";
+          entry.marker.setIcon(createProvinceLabelIcon(desired));
+        });
       }
 
       function loadCountryGeoJSON(gj, { silent = false } = {}) {
@@ -2870,9 +3081,50 @@
         }
       }
 
-      /* ==================== CSV loader ==================== */
-      csvInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
+      /* ==================== CSV / Excel loader ==================== */
+      resetSheetPicker();
+      if (csvInput) {
+        csvInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          resetSheetPicker();
+          if (!file) return;
+          const ext = getFileExtension(file.name);
+          if (ext === "xlsx") {
+            handleExcelFile(file);
+          } else {
+            handleCsvFile(file);
+          }
+        });
+      }
+
+      if (sheetSelect) {
+        sheetSelect.addEventListener("change", () => {
+          if (sheetConfirmBtn) {
+            sheetConfirmBtn.disabled = !sheetSelect.value;
+          }
+          setSheetPickerMessage({
+            sheetName: sheetSelect.value,
+            wasAuto: false,
+          });
+        });
+      }
+
+      if (sheetConfirmBtn) {
+        sheetConfirmBtn.addEventListener("click", () => {
+          if (!pendingWorkbook) {
+            showToast("Load an Excel file to choose a sheet.");
+            return;
+          }
+          const selectedSheet = sheetSelect && sheetSelect.value;
+          if (!selectedSheet) {
+            showToast("Select a sheet to load.");
+            return;
+          }
+          loadExcelSheet(selectedSheet);
+        });
+      }
+
+      function handleCsvFile(file) {
         if (!file) return;
         Papa.parse(file, {
           header: true,
@@ -2887,13 +3139,160 @@
           },
           error: (err) => showToast("CSV parse failed: " + err),
         });
-      });
+      }
+
+      function handleExcelFile(file) {
+        if (typeof XLSX === "undefined") {
+          showToast("Excel support is unavailable. Please reload the page.");
+          return;
+        }
+        const loadToken = ++excelLoaderToken;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          if (loadToken !== excelLoaderToken) return;
+          try {
+            const workbook = XLSX.read(new Uint8Array(evt.target.result), {
+              type: "array",
+            });
+            const sheetNames = workbook?.SheetNames || [];
+            if (!sheetNames.length) {
+              showToast("No sheets were found in this Excel file.");
+              return;
+            }
+            pendingWorkbook = workbook;
+            pendingWorkbookFile = file.name;
+            showSheetPicker(sheetNames);
+          } catch (err) {
+            console.error(err);
+            showToast("Excel parse failed: " + err.message);
+          }
+        };
+        reader.onerror = () => {
+          if (loadToken !== excelLoaderToken) return;
+          const reason =
+            (reader.error && reader.error.message) || reader.error || "unknown";
+          showToast("Excel read error: " + reason);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      function getFileExtension(name = "") {
+        if (!name.includes(".")) return "";
+        return name.split(".").pop().toLowerCase();
+      }
+
+      function showSheetPicker(sheetNames) {
+        if (!sheetSelectGroup || !sheetSelect) return;
+        sheetSelect.innerHTML = "";
+        sheetNames.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          sheetSelect.appendChild(option);
+        });
+        const preferred = choosePreferredSheet(sheetNames);
+        if (preferred) {
+          sheetSelect.value = preferred;
+        }
+        sheetSelectGroup.style.display = "flex";
+        if (sheetConfirmBtn) {
+          sheetConfirmBtn.disabled = !sheetSelect.value;
+        }
+        setSheetPickerMessage({
+          sheetName: sheetSelect.value,
+          wasAuto: isPreferredSheetName(sheetSelect.value),
+        });
+      }
+
+      function resetSheetPicker() {
+        excelLoaderToken += 1;
+        pendingWorkbook = null;
+        pendingWorkbookFile = "";
+        if (sheetSelect) {
+          sheetSelect.innerHTML = "";
+        }
+        if (sheetSelectGroup) {
+          sheetSelectGroup.style.display = "none";
+        }
+        if (sheetConfirmBtn) {
+          sheetConfirmBtn.disabled = true;
+        }
+        setSheetPickerMessage({ sheetName: "" });
+      }
+
+      function loadExcelSheet(sheetName) {
+        if (typeof XLSX === "undefined") {
+          showToast("Excel support is unavailable. Please reload the page.");
+          return;
+        }
+        if (!pendingWorkbook) {
+          showToast("No Excel file is loaded.");
+          return;
+        }
+        const sheet = pendingWorkbook.Sheets?.[sheetName];
+        if (!sheet) {
+          showToast(`Sheet "${sheetName}" was not found.`);
+          return;
+        }
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (!rows.length) {
+          showToast(`Sheet "${sheetName}" does not contain any rows.`);
+          return;
+        }
+        loadCSV(rows);
+        setSheetPickerMessage({ sheetName, loaded: true });
+      }
+
+      function choosePreferredSheet(sheetNames) {
+        if (!sheetNames || !sheetNames.length) return "";
+        const lower = sheetNames.map((name) => name.toLowerCase());
+        for (const preferred of PREFERRED_SHEET_NAMES) {
+          const idx = lower.indexOf(preferred);
+          if (idx >= 0) {
+            return sheetNames[idx];
+          }
+        }
+        return sheetNames[0];
+      }
+
+      function isPreferredSheetName(name) {
+        if (!name) return false;
+        return PREFERRED_SHEET_NAMES.includes(name.toLowerCase());
+      }
+
+      function setSheetPickerMessage({
+        sheetName = "",
+        wasAuto = false,
+        loaded = false,
+      }) {
+        if (!sheetAutoSelectMsg) return;
+        if (!sheetName) {
+          sheetAutoSelectMsg.textContent = "";
+          sheetAutoSelectMsg.style.display = "none";
+          return;
+        }
+        const workbookLabel = pendingWorkbookFile
+          ? ` from "${pendingWorkbookFile}"`
+          : "";
+        let text = "";
+        if (loaded) {
+          text = `Loaded sheet "${sheetName}"${workbookLabel}. Select a different sheet and confirm if needed.`;
+        } else if (wasAuto) {
+          text = `Auto-selected sheet "${sheetName}"${workbookLabel}. Confirm that this is the sheet with data.`;
+        } else {
+          text = `Confirm that "${sheetName}"${workbookLabel} is the sheet with data.`;
+        }
+        sheetAutoSelectMsg.textContent = text;
+        sheetAutoSelectMsg.style.display = "inline-block";
+      }
 
       function loadCSV(rows) {
         dataState.samples = [];
         dataState.clusters.clear();
         dataState.clusterOrder = [];
         dataState.colorScale = null;
+        dataState.samplesByDay = new Map();
+        dataState.chartCache = createEmptyChartCache();
         groupingState.options = [];
         groupingState.captureColumns = new Set();
         groupingState.activeColumn = null;
@@ -2942,6 +3341,9 @@
           const nameFromCsv = normalizeKey(
             row.AdmDiv2 || row.AdminDiv2 || row.admdiv2 || row.adminDiv2
           );
+          const provinceNameCsv = normalizeKey(
+            row.AdmDiv1 || row.AdminDiv1 || row.admdiv1 || row.adminDiv1
+          );
 
           if (!gid || !date) {
             bad++;
@@ -2975,9 +3377,9 @@
           const gid1 = geoState.gid2_to_gid1.get(gid) || null;
           const adm0 = gid1 ? geoState.gid1_to_adm0.get(gid1) || null : null;
 
-          const provName = gid1
-            ? geoState.gid1_to_name.get(gid1) || gid1
-            : null;
+          const provName =
+            provinceNameCsv ||
+            (gid1 ? geoState.gid1_to_name.get(gid1) || gid1 : null);
           const ctryName = adm0
             ? geoState.adm0_to_name.get(adm0) || adm0
             : null;
@@ -3001,9 +3403,20 @@
           });
 
           // ensure registries/names are filled even if ADM2 GeoJSON came later
+          dataState.adm2Ids.add(gid);
+          dataState.idToName.set(gid, districtName || gid);
           if (gid1) {
-            dataState.adm1Ids.add(gid1);
-            dataState.idToName.set(gid1, provName || gid1);
+            if (provName) {
+              setProvinceDisplayLabel(gid1, provName);
+            } else {
+              dataState.adm1Ids.add(gid1);
+              if (!dataState.idToName.has(gid1)) {
+                dataState.idToName.set(
+                  gid1,
+                  geoState.gid1_to_name.get(gid1) || gid1
+                );
+              }
+            }
           }
           if (adm0) {
             dataState.adm0Ids.add(adm0);
@@ -3019,6 +3432,7 @@
           resetGroupingSelectUI("No eligible groups");
           return;
         }
+        rebuildSampleDayIndex();
         timelineState.datePrecision = hadExactDate
           ? "day"
           : hadMonthYearFallback
@@ -3044,6 +3458,7 @@
         populateAreaSearchLists();
 
         setPlaying(true);
+        refreshProvinceLabelTexts();
 
         let msg = `Loaded ${ok} samples`;
         if (missingGIDs.size) {
@@ -3149,6 +3564,7 @@
           dataState.colorScale = null;
           dataState.clusterOrder = [];
         }
+        rebuildChartCache();
         if (!opts.skipSelectSync) {
           syncGroupingSelect();
         }
@@ -3197,6 +3613,9 @@
         if (mapState.provinceLabelsLayer) {
           mapState.provinceLabelsLayer.clearLayers();
         }
+        if (geoState.provinceLabelMarkers) {
+          geoState.provinceLabelMarkers.clear();
+        }
         if (mapState.countryLabelsLayer) {
           mapState.countryLabelsLayer.clearLayers();
         }
@@ -3208,8 +3627,11 @@
         dataState.clusters.clear();
         dataState.clusterOrder = [];
         dataState.colorScale = null;
+        dataState.samplesByDay = new Map();
+        dataState.chartCache = createEmptyChartCache();
 
         legendState.selected.clear();
+        clearMarkerIconCache();
 
         if (mapState.markersLayer) mapState.markersLayer.clearLayers();
         if (mapState.countsLayer) mapState.countsLayer.clearLayers();
@@ -3277,6 +3699,7 @@
           1,
           parseInt(markerSizeInput.value || "5", 10)
         );
+        clearMarkerIconCache();
         updateScene();
       });
 
@@ -3439,6 +3862,19 @@
         });
       }
 
+      function rebuildSampleDayIndex() {
+        dataState.samplesByDay = new Map();
+        if (!dataState.samples || !dataState.samples.length) {
+          return;
+        }
+        dataState.samples.forEach((sample) => {
+          if (!dataState.samplesByDay.has(sample.dayInt)) {
+            dataState.samplesByDay.set(sample.dayInt, []);
+          }
+          dataState.samplesByDay.get(sample.dayInt).push(sample);
+        });
+      }
+
       /* ==================== Scene & Charts ==================== */
       function updateScene() {
         if (timelineState.currentDay == null) return;
@@ -3454,60 +3890,68 @@
         currentDateLabel.textContent = dateStr;
         dateTitle.textContent = dateStr;
 
-        const inWindow = dataState.samples.filter(
-          (s) => s.dayInt >= startDay && s.dayInt <= timelineState.currentDay
-        );
-        const visibleLife = inWindow.filter(
-          (s) =>
-            timelineState.currentDay - s.dayInt <=
-            timelineState.lifespanDays - 1
-        );
-
         if (mapState.markersLayer) {
           mapState.markersLayer.clearLayers();
         }
         const isAll = legendState.selected.size === 0;
         const isNone = legendState.selected.has("__NONE__");
-
-        visibleLife.forEach((s) => {
-          const key = s.cluster || "Unclustered";
-          const glyph = getClusterGlyph(key);
-          const ageDays = timelineState.currentDay - s.dayInt;
-          const baseAlpha = Math.max(
-            0.25,
-            1 - ageDays / Math.max(1, timelineState.lifespanDays)
-          );
-          const active = isAll
-            ? true
-            : !isNone && legendState.selected.has(key);
-
-          const icon = svgMarkerIcon({
-            shape: glyph.shape,
-            color: glyph.color,
-            size: mapState.markerRadius,
-            fillOpacity: active ? 0.35 + 0.55 * baseAlpha : 0,
-            strokeOpacity: active ? 1 : 0.7,
+        const maxAge = Math.max(1, timelineState.lifespanDays);
+        const shouldCount = mapState.showCounts && mapState.countsLayer;
+        const countsMap = shouldCount ? new Map() : null;
+        const processSamples = (samples) => {
+          if (!samples || !samples.length) return;
+          const targetLayer = mapState.markersLayer;
+          samples.forEach((s) => {
+            const ageDays = timelineState.currentDay - s.dayInt;
+            if (ageDays < 0 || ageDays > timelineState.lifespanDays - 1) return;
+            const key = s.cluster || "Unclustered";
+            const glyph = getClusterGlyph(key);
+            const baseAlpha = Math.max(0.25, 1 - ageDays / maxAge);
+            const active = isAll ? true : !isNone && legendState.selected.has(key);
+            if (countsMap) {
+              countsMap.set(s.gid, (countsMap.get(s.gid) || 0) + 1);
+            }
+            const icon = getCachedMarkerIcon({
+              shape: glyph.shape,
+              color: glyph.color,
+              size: mapState.markerRadius,
+              fillOpacity: active ? 0.35 + 0.55 * baseAlpha : 0,
+              strokeOpacity: active ? 1 : 0.7,
+            });
+            if (targetLayer) {
+              L.marker(s.latlng, { icon })
+                .bindTooltip(
+                  `${displayNameForId(s.gid)}<br><strong>${
+                    s.cluster || "Unclustered"
+                  }</strong><br>${fmtDateFromDayInt(s.dayInt)}`
+                )
+                .addTo(targetLayer);
+            }
           });
-
-          L.marker(s.latlng, { icon })
-            .bindTooltip(
-              `${geoState.gidToName.get(s.gid) || s.gid}<br><strong>${
-                s.cluster || "Unclustered"
-              }</strong><br>${fmtDateFromDayInt(s.dayInt)}`
-            )
-            .addTo(mapState.markersLayer);
-        });
+        };
+        if (dataState.samplesByDay && dataState.samplesByDay.size > 0) {
+          for (let day = startDay; day <= timelineState.currentDay; day++) {
+            const entries = dataState.samplesByDay.get(day);
+            if (entries && entries.length) {
+              processSamples(entries);
+            }
+          }
+        } else {
+          const fallback = dataState.samples.filter(
+            (s) =>
+              s.dayInt >= startDay &&
+              s.dayInt <= timelineState.currentDay &&
+              timelineState.currentDay - s.dayInt <=
+                timelineState.lifespanDays - 1
+          );
+          processSamples(fallback);
+        }
 
         if (mapState.countsLayer) {
           mapState.countsLayer.clearLayers();
         }
-        if (mapState.showCounts && mapState.countsLayer) {
-          const counts = d3.rollup(
-            visibleLife,
-            (v) => v.length,
-            (s) => s.gid
-          );
-          for (const [gid, count] of counts) {
+        if (countsMap && mapState.countsLayer) {
+          for (const [gid, count] of countsMap) {
             const center = geoState.gidToCentroid.get(gid);
             if (!center) continue;
             const icon = L.divIcon({
@@ -3626,6 +4070,88 @@
           : "Align axis (rolling 36 months)";
       }
 
+      function bucketKeyToDayInt(bucketKey, useQuarter) {
+        if (!bucketKey) return Infinity;
+        if (useQuarter) {
+          const [yearStr, quarterStr] = bucketKey.split("-Q");
+          const year = parseInt(yearStr, 10);
+          const quarter = parseInt(quarterStr, 10);
+          if (isNaN(year) || isNaN(quarter)) return Infinity;
+          const month = (quarter - 1) * 3;
+          return Math.floor(Date.UTC(year, month, 1) / DAY_MS);
+        }
+        const [yearStr, monthStr] = bucketKey.split("-");
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10) - 1;
+        if (isNaN(year) || isNaN(month)) return Infinity;
+        return Math.floor(Date.UTC(year, month, 1) / DAY_MS);
+      }
+
+      function incrementChartBucket(store, areaId, bucketKey, clusterName) {
+        if (!store || !areaId || !bucketKey) return;
+        let areaMap = store.get(areaId);
+        if (!areaMap) {
+          areaMap = new Map();
+          store.set(areaId, areaMap);
+        }
+        let counts = areaMap.get(bucketKey);
+        if (!counts) {
+          counts = new Map();
+          areaMap.set(bucketKey, counts);
+        }
+        counts.set(clusterName, (counts.get(clusterName) || 0) + 1);
+      }
+
+      function rebuildChartCache() {
+        dataState.chartCache = createEmptyChartCache();
+        if (!dataState.samples || !dataState.samples.length) return;
+        dataState.samples.forEach((sample) => {
+          const clusterKey = sample.cluster || "Unclustered";
+          const monthKey = monthKeyFromDayInt(sample.dayInt);
+          const quarterKey = quarterKeyFromDayInt(sample.dayInt);
+          incrementChartBucket(
+            dataState.chartCache.adm2.month,
+            sample.gid,
+            monthKey,
+            clusterKey
+          );
+          incrementChartBucket(
+            dataState.chartCache.adm2.quarter,
+            sample.gid,
+            quarterKey,
+            clusterKey
+          );
+          if (sample.gid1) {
+            incrementChartBucket(
+              dataState.chartCache.adm1.month,
+              sample.gid1,
+              monthKey,
+              clusterKey
+            );
+            incrementChartBucket(
+              dataState.chartCache.adm1.quarter,
+              sample.gid1,
+              quarterKey,
+              clusterKey
+            );
+          }
+          if (sample.adm0) {
+            incrementChartBucket(
+              dataState.chartCache.adm0.month,
+              sample.adm0,
+              monthKey,
+              clusterKey
+            );
+            incrementChartBucket(
+              dataState.chartCache.adm0.quarter,
+              sample.adm0,
+              quarterKey,
+              clusterKey
+            );
+          }
+        });
+      }
+
       function renderChartInto(
         groups,
         selectedAreaId,
@@ -3640,70 +4166,50 @@
 
         const upto = timelineState.currentDay ?? timelineState.maxDay ?? 0;
         const level = appState.charts.aggLevel;
+        const useQuarter = appState.charts.useQuarter;
 
-        // filter samples by chosen level
-        let rowsAll;
-        if (level === "adm2") {
-          rowsAll = dataState.samples.filter(
-            (s) => s.gid === selectedAreaId && s.dayInt <= upto
-          );
-        } else if (level === "adm1") {
-          rowsAll = dataState.samples.filter(
-            (s) => s.gid1 === selectedAreaId && s.dayInt <= upto
-          );
-        } else {
-          rowsAll = dataState.samples.filter(
-            (s) => s.adm0 === selectedAreaId && s.dayInt <= upto
-          );
+        const cacheLevel = dataState.chartCache[level];
+        const periodStore =
+          cacheLevel && (useQuarter ? cacheLevel.quarter : cacheLevel.month);
+        const areaSeries = periodStore ? periodStore.get(selectedAreaId) : null;
+        if (!areaSeries || areaSeries.size === 0) {
+          return;
         }
-
-        const periodKeyFn = appState.charts.useQuarter
-          ? quarterKeyFromDayInt
-          : monthKeyFromDayInt;
-        const months =
+        const domainBuckets =
           monthsDomain && monthsDomain.length
             ? monthsDomain.slice()
-            : Array.from(
-                new Set(rowsAll.map((r) => periodKeyFn(r.dayInt)))
-              ).sort();
-
-        const clusterNames = Array.from(
-          new Set(rowsAll.map((r) => r.cluster || "Unclustered"))
-        ).sort();
-
-        const monthToCounts = new Map(
-          months.map((m) => [
-            m,
-            Object.fromEntries(clusterNames.map((c) => [c, 0])),
-          ])
+            : Array.from(areaSeries.keys()).sort();
+        const buckets = domainBuckets.filter(
+          (bucket) => bucketKeyToDayInt(bucket, useQuarter) <= upto
         );
-        rowsAll.forEach((r) => {
-          const mk = periodKeyFn(r.dayInt);
-          if (!monthToCounts.has(mk)) {
-            if (!monthsDomain) {
-              monthToCounts.set(
-                mk,
-                Object.fromEntries(clusterNames.map((c) => [c, 0]))
-              );
-              months.push(mk);
-            } else return;
-          }
-          monthToCounts.get(mk)[r.cluster || "Unclustered"] += 1;
-        });
-        months.sort();
-        const data = months.map((m) => ({
-          bucket: m,
-          ...(monthToCounts.get(m) || {}),
-        }));
+        if (!buckets.length) return;
 
-        const x = d3.scaleBand().domain(months).range([0, innerW]).padding(0.1);
+        const clusterNames = new Set();
+        areaSeries.forEach((counts, bucket) => {
+          if (bucketKeyToDayInt(bucket, useQuarter) <= upto) {
+            counts.forEach((_, key) => clusterNames.add(key));
+          }
+        });
+        if (!clusterNames.size) return;
+        const orderedClusters = Array.from(clusterNames).sort();
+
+        const data = buckets.map((bucket) => {
+          const counts = areaSeries.get(bucket);
+          const row = { bucket };
+          orderedClusters.forEach((cluster) => {
+            row[cluster] = counts ? counts.get(cluster) || 0 : 0;
+          });
+          return row;
+        });
+
+        const x = d3.scaleBand().domain(buckets).range([0, innerW]).padding(0.1);
         const yMax = data.length
-          ? d3.max(data, (d) => d3.sum(clusterNames, (c) => d[c] || 0))
+          ? d3.max(data, (d) => d3.sum(orderedClusters, (c) => d[c] || 0))
           : 1;
         const y = d3.scaleLinear().domain([0, yMax]).nice().range([innerH, 0]);
 
         const color = (name) => getClusterGlyph(name).color;
-        const stack = d3.stack().keys(clusterNames);
+        const stack = d3.stack().keys(orderedClusters);
         const series = stack(data);
 
         const fadeVal = parseFloat(
@@ -3737,7 +4243,7 @@
           .attr("width", x.bandwidth());
 
         gXAxis.call(
-          d3.axisBottom(x).tickValues(months).tickFormat(formatTimeBucketLabel)
+          d3.axisBottom(x).tickValues(buckets).tickFormat(formatTimeBucketLabel)
         );
         gXAxis
           .selectAll("text")
@@ -4365,7 +4871,7 @@
       selector: null,
       title: 'You’re ready 🎉',
       html: `
-        <p>Explore your data freely — you can replay this tutorial anytime from the <b>?</b> button.</p>
+        <p>Explore your data freely. You can read about the controls from the <b>?</b> button.</p>
         <p>Tutorial: </p>
       `,
       primary: 'Start exploring',
