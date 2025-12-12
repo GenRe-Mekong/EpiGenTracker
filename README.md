@@ -21,8 +21,8 @@
 
 
 ## ✨ What it is
-EpiGenTracker turns tabular data (.csv) into an interactive map–timeline–chart visualisation.  
-Load your **sample CSV**, play through time, compare **two regions**, and (optionally) explore a **genetic similarity tree**.
+EpiGenTracker turns tabular data (.csv or .xlsx) into an interactive map–timeline–chart visualisation.  
+Load your **sample data**, play through time, compare **two regions**, and (optionally) explore a **genetic similarity tree**.
 
 - **Map:** plots samples by administrative region.  
 - **Timeline player:** animate sample appearances by collection date.  
@@ -35,7 +35,7 @@ Load your **sample CSV**, play through time, compare **two regions**, and (optio
 ## ⚡ Quick Start
 1. **Access App:** https://genre-mekong.github.io/EpiGenTracker/  
 2. **Load Map:** Click **Load eastern GMS map (KH, LA, TH, VN)** or **upload your own GeoJSON layers (ADM0–ADM2)** <p> - (Details on how to prepare your own map will be updated soon).</p>  
-3. **Load Sample Data (.csv)** → the map animates over time. <p> - (Details on how to prepare your data will be updated soon) </p>
+3. **Load Sample Data (.csv or .xlsx)** → the map animates over time. <p> - (Details on how to prepare your data will be updated soon) </p>
 4. **😀 Explore Data!** → Aggregate temporal trend by region, zoom in and out, track specific labels. <p></p>
 5. *(Optional)* Load **Genetic Distance (.tab)** to enable the similarity tree.
 
@@ -66,8 +66,10 @@ KHM.1.1_1,2023-02-02,ClusterB
 VNM.2.3_1,2023-02-10,Unclustered
 ```
 
+
 ## 🧭 Full User guide
-Coming soon!
+https://genremekong.org/tools/epigentracker
+
 
 
 ## 📚 Citation & Author
@@ -75,6 +77,4 @@ Coming soon!
 
 If you use EpiGenTracker in your work, please cite:
 > GenRe-Mekong. EpiGenTracker: An interactive browser app for genetic epidemiology data visualization. 2025. https://github.com/GenRe-Mekong/EpiGenTracker
-
-
 
