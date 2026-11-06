@@ -73,8 +73,12 @@ https://genremekong.org/tools/epigentracker
 
 
 ## 📚 Citation & Author
-✨ Developed by **Varanya Wasakul** with support from AI-assisted development tools
+✨ Application DDeveloped by **Varanya Wasakul** with support from AI-assisted development tools
 
 If you use EpiGenTracker in your work, please cite:
 > GenRe-Mekong. EpiGenTracker: An interactive browser app for genetic epidemiology data visualization. 2025. https://github.com/GenRe-Mekong/EpiGenTracker
 
+### 🗺️ Map Data Attribution
+*Administrative boundary data used in EpiGenTracker are sourced from:*
+
+**GADM (Global Administrative Areas)**: https://gadm.org — Administrative boundaries used for academic and non-commercial research, subject to GADM's licensing conditions.
